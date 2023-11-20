@@ -1,0 +1,14 @@
+README.md
+setup.py
+simple_rexy/__init__.py
+simple_rexy.egg-info/PKG-INFO
+simple_rexy.egg-info/SOURCES.txt
+simple_rexy.egg-info/dependency_links.txt
+simple_rexy.egg-info/requires.txt
+simple_rexy.egg-info/top_level.txt
+simple_rexy/envs/__init__.py
+simple_rexy/envs/rexy_env.py
+simple_rexy/resources/REXY.py
+simple_rexy/resources/__init__.py
+simple_rexy/resources/goal.py
+simple_rexy/resources/plane.py

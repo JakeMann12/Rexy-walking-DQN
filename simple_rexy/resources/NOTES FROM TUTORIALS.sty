@@ -1,0 +1,12 @@
+NOTES FROM TUTORIALS
+
+To minimize this error, we will use the Huber loss_. The Huber loss acts like the mean squared error when the error is small, but like the mean absolute error when the error is large - this makes it more robust to outliers when the estimates of Q are very noisy. We calculate
+this over a batch of transitions, $B$, sampled from the replay
+memory:
+
+\begin{align}\mathcal{L} = \frac{1}{|B|}\sum_{(s, a, s', r) \ \in \ B} \mathcal{L}(\delta)\end{align}
+
+\begin{align}\text{where} \quad \mathcal{L}(\delta) = \begin{cases}
+     \frac{1}{2}{\delta^2}  & \text{for } |\delta| \le 1, \\
+     |\delta| - \frac{1}{2} & \text{otherwise.}
+   \end{cases}\end{align}
