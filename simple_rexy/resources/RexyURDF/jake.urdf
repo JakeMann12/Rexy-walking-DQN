@@ -1,0 +1,768 @@
+<?xml version="1.0" ?>
+<robot name="jake">
+
+<material name="silver">
+  <color rgba="0.700 0.700 0.700 1.000"/>
+</material>
+
+<link name="base_link">
+  <inertial>
+    <origin xyz="0.07366642744220055 3.4324931540878744e-08 0.07497454082711993" rpy="0 0 0"/>
+    <mass value="0.0735175424772156"/>
+    <inertia ixx="0.00022715298291462257" iyy="0.00035650467246695875" izz="0.00027330612180046226" ixy="2.139282183341953e-11" iyz="1.4540012846842918e-11" ixz="-0.00010753830886941747"/>
+  </inertial>
+  <visual>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+    <material/>
+  </visual>
+  <collision>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="hipmount11">
+  <inertial>
+    <origin xyz="-0.010450877473847946 -0.020598854976074027 -0.006975051044249692" rpy="0 0 0"/>
+    <mass value="0.002127030917238079"/>
+    <inertia ixx="9.64808475540197e-07" iyy="5.00558554912034e-07" izz="9.430966968339194e-07" ixy="-1.0072694535571229e-07" iyz="4.059700887159884e-14" ixz="2.3205380691548698e-14"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.02253 0.0254 -0.020945" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/hipmount11.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+    <material/>
+  </visual>
+  <collision>
+    <origin xyz="-0.02253 0.0254 -0.020945" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/hipmount11.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="servo11Motor_w_Flywheel_Attached1">
+  <inertial>
+    <origin xyz="-0.04553647829764142 -0.010497058076662617 -0.0001456577357472847" rpy="0 0 0"/>
+    <mass value="0.05200108715490274"/>
+    <inertia ixx="1.1411737965950517e-05" iyy="7.3256973563640795e-06" izz="1.3509763471800736e-05" ixy="4.391971279984005e-07" iyz="2.360253048642449e-11" ixz="1.749658177164408e-10"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.062502 0.044282 -0.014116" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/servo11Motor_w_Flywheel_Attached1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+    <material/>
+  </visual>
+  <collision>
+    <origin xyz="-0.062502 0.044282 -0.014116" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/servo11Motor_w_Flywheel_Attached1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="hipmount21">
+  <inertial>
+    <origin xyz="0.020598863547502767 0.010451077473885108 1.0436543625841344e-09" rpy="0 0 0"/>
+    <mass value="0.002127030917238079"/>
+    <inertia ixx="5.005585549120615e-07" iyy="9.648084755402003e-07" izz="9.430966968339211e-07" ixy="-1.0072694535572203e-07" iyz="2.3205377726933383e-14" ixz="4.0597003154126446e-14"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.035628 0.067677 -0.01397" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/hipmount21.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+    <material/>
+  </visual>
+  <collision>
+    <origin xyz="-0.035628 0.067677 -0.01397" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/hipmount21.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="servo21Motor_w_Flywheel_Attached_11">
+  <inertial>
+    <origin xyz="-0.012448933351908775 0.07796467829767864 0.0001456077351519574" rpy="0 0 0"/>
+    <mass value="0.05200108715490274"/>
+    <inertia ixx="7.325697356363954e-06" iyy="1.1411737965950599e-05" izz="1.3509763471800844e-05" ixy="4.3919712799833275e-07" iyz="1.7496581771305267e-10" ixz="2.3602530493200755e-11"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.077456 0.140077 -0.013824" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/servo21Motor_w_Flywheel_Attached_11.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+    <material/>
+  </visual>
+  <collision>
+    <origin xyz="-0.077456 0.140077 -0.013824" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/servo21Motor_w_Flywheel_Attached_11.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="thigh1">
+  <inertial>
+    <origin xyz="0.0002239642103345485 -0.0039656170424636344 -0.02706053963576697" rpy="0 0 0"/>
+    <mass value="0.015624350984100959"/>
+    <inertia ixx="1.3839764164106519e-05" iyy="1.3943498199421182e-05" izz="4.5169682811754634e-06" ixy="-1.2569470561092514e-09" iyz="2.448121333010221e-06" ixz="1.1273443839689718e-07"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.077905 0.080775 -0.01397" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/thigh1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+    <material/>
+  </visual>
+  <collision>
+    <origin xyz="-0.077905 0.080775 -0.01397" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/thigh1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="foot1Component181">
+  <inertial>
+    <origin xyz="0.011361275457841463 -0.0004856821062526051 -0.01795697983808972" rpy="0 0 0"/>
+    <mass value="0.013961224525381573"/>
+    <inertia ixx="4.510420510224239e-06" iyy="8.317584753180212e-06" izz="1.1637670568507565e-05" ixy="2.2788007857949411e-07" iyz="-1.5594201783255537e-08" ixz="4.293290906789483e-07"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.078151 0.08501 0.148034" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/foot1Component181.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+    <material/>
+  </visual>
+  <collision>
+    <origin xyz="-0.078151 0.08501 0.148034" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/foot1Component181.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="hipmount1Mirror1">
+  <inertial>
+    <origin xyz="-0.010450877473847943 0.020598854976073833 -0.006975051044249675" rpy="0 0 0"/>
+    <mass value="0.002127030917238081"/>
+    <inertia ixx="9.648084755402063e-07" iyy="5.005585549116387e-07" izz="9.430966968335501e-07" ixy="1.0072694535571822e-07" iyz="-4.0597008659840604e-14" ixz="2.320537719753779e-14"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.02253 -0.0254 -0.020945" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/hipmount1Mirror1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+    <material/>
+  </visual>
+  <collision>
+    <origin xyz="-0.02253 -0.0254 -0.020945" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/hipmount1Mirror1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="servo1Mirror1Motor_w_Flywheel_Attached_21">
+  <inertial>
+    <origin xyz="0.013263521702359112 0.010497058076662569 -0.02808565773574729" rpy="0 0 0"/>
+    <mass value="0.05200108715490543"/>
+    <inertia ixx="1.1411737965951954e-05" iyy="7.325697356364784e-06" izz="1.3509763471802172e-05" ixy="-4.391971279984073e-07" iyz="-2.3602530493200755e-11" ixz="1.7496581775032212e-10"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.003702 -0.044282 -0.042056" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/servo1Mirror1Motor_w_Flywheel_Attached_21.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+    <material/>
+  </visual>
+  <collision>
+    <origin xyz="-0.003702 -0.044282 -0.042056" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/servo1Mirror1Motor_w_Flywheel_Attached_21.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="hipmount2Mirror1">
+  <inertial>
+    <origin xyz="0.020598863547502608 -0.01045107747388515 1.0436543591146874e-09" rpy="0 0 0"/>
+    <mass value="0.002127030917238081"/>
+    <inertia ixx="5.005585549116659e-07" iyy="9.648084755402291e-07" izz="9.430966968335298e-07" ixy="1.0072694535572966e-07" iyz="-2.320537857396633e-14" ixz="4.059700018951113e-14"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.035628 -0.067677 -0.01397" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/hipmount2Mirror1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+    <material/>
+  </visual>
+  <collision>
+    <origin xyz="-0.035628 -0.067677 -0.01397" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/hipmount2Mirror1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="servo31Motor_w_Flywheel_Attached_1_11">
+  <inertial>
+    <origin xyz="0.06100154298729926 -0.018782200273749973 0.0027089283078350623" rpy="0 0 0"/>
+    <mass value="0.05200108715490274"/>
+    <inertia ixx="1.3509763471800682e-05" iyy="1.1411737965950517e-05" izz="7.3256973563640354e-06" ixy="1.7496581765884256e-10" iyz="-4.3919712799841406e-07" ixz="-2.3602530628726026e-11"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.017036 0.04237 0.064068" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/servo31Motor_w_Flywheel_Attached_1_11.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+    <material/>
+  </visual>
+  <collision>
+    <origin xyz="-0.017036 0.04237 0.064068" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/servo31Motor_w_Flywheel_Attached_1_11.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="calf1Main_Calf1">
+  <inertial>
+    <origin xyz="-0.00044887238441694566 -0.008451510113759872 -0.02178833109571708" rpy="0 0 0"/>
+    <mass value="0.008433806361749868"/>
+    <inertia ixx="6.334466357061025e-06" iyy="6.565083135876671e-06" izz="8.797591897749866e-07" ixy="-2.1715990777658326e-09" iyz="2.1916108904953548e-07" ixz="2.5548867809316615e-08"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.078038 0.079815 0.074257" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/calf1Main_Calf1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+    <material/>
+  </visual>
+  <collision>
+    <origin xyz="-0.078038 0.079815 0.074257" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/calf1Main_Calf1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="servo2Mirror1Motor_w_Flywheel_Attached_1_21">
+  <inertial>
+    <origin xyz="-0.012448933351908859 0.04569132170232183 0.02808560773515196" rpy="0 0 0"/>
+    <mass value="0.05200108715490543"/>
+    <inertia ixx="7.32569735636474e-06" iyy="1.14117379659519e-05" izz="1.350976347180247e-05" ixy="-4.3919712799838696e-07" iyz="-1.7496581771982893e-10" ixz="2.3602530493200755e-11"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.077456 -0.016421 0.014116" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/servo2Mirror1Motor_w_Flywheel_Attached_1_21.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+    <material/>
+  </visual>
+  <collision>
+    <origin xyz="-0.077456 -0.016421 0.014116" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/servo2Mirror1Motor_w_Flywheel_Attached_1_21.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="thighMirror1">
+  <inertial>
+    <origin xyz="0.00022396445139864773 0.003965592661951595 -0.027060572596788894" rpy="0 0 0"/>
+    <mass value="0.015624332312955288"/>
+    <inertia ixx="1.383974261506272e-05" iyy="1.3943482227764988e-05" izz="4.516960115786173e-06" ixy="1.2566790780053514e-09" iyz="-2.4481159037913195e-06" ixz="1.1273430171928472e-07"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.077905 -0.080775 -0.01397" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/thighMirror1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+    <material/>
+  </visual>
+  <collision>
+    <origin xyz="-0.077905 -0.080775 -0.01397" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/thighMirror1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="servo3Mirror1Motor_w_Flywheel_Attached_1_1_11">
+  <inertial>
+    <origin xyz="-0.06073545701270067 -0.053177799726249524 0.0027089283078351317" rpy="0 0 0"/>
+    <mass value="0.05200108715490543"/>
+    <inertia ixx="1.3509763471802145e-05" iyy="1.1411737965952144e-05" izz="7.325697356364794e-06" ixy="-1.7496581771305267e-10" iyz="4.3919712799838696e-07" ixz="-2.3602530574515918e-11"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.138773 -0.11433 0.064068" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/servo3Mirror1Motor_w_Flywheel_Attached_1_1_11.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+    <material/>
+  </visual>
+  <collision>
+    <origin xyz="-0.138773 -0.11433 0.064068" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/servo3Mirror1Motor_w_Flywheel_Attached_1_1_11.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="calfMirror1Main_Calf_11">
+  <inertial>
+    <origin xyz="-0.00044887001728800835 0.008451468083334468 -0.021788294074194664" rpy="0 0 0"/>
+    <mass value="0.008433842168596982"/>
+    <inertia ixx="6.334507938049379e-06" iyy="6.565125650764874e-06" izz="8.797678338157377e-07" ixy="2.1718060587300474e-09" iyz="-2.1915576099561945e-07" ixz="2.5548906498989825e-08"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.078038 -0.079815 0.074257" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/calfMirror1Main_Calf_11.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+    <material/>
+  </visual>
+  <collision>
+    <origin xyz="-0.078038 -0.079815 0.074257" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/calfMirror1Main_Calf_11.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="footMirror1Component231">
+  <inertial>
+    <origin xyz="0.011361252255308318 0.00048565544201287225 -0.017957007039870188" rpy="0 0 0"/>
+    <mass value="0.013961190877406347"/>
+    <inertia ixx="4.510400035418578e-06" iyy="8.317561693790311e-06" izz="1.1637642303617706e-05" ixy="-2.2787528977984757e-07" iyz="1.559759098832339e-08" ixz="4.2933288601587714e-07"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.078151 -0.08501 0.148034" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/footMirror1Component231.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+    <material/>
+  </visual>
+  <collision>
+    <origin xyz="-0.078151 -0.08501 0.148034" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/footMirror1Component231.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="jake_tail_STEP_v31Tail1Base1">
+  <inertial>
+    <origin xyz="-0.0028634109138929026 0.021824857801826292 0.017611438876835576" rpy="0 0 0"/>
+    <mass value="0.006025637969283059"/>
+    <inertia ixx="2.494837719479819e-06" iyy="2.9567609529643606e-06" izz="2.5336929275497234e-06" ixy="-5.124145240902433e-12" iyz="4.634635232148862e-11" ixz="-7.653164338532848e-07"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.01524 0.021819 -0.03048" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/jake_tail_STEP_v31Tail1Base1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+    <material/>
+  </visual>
+  <collision>
+    <origin xyz="0.01524 0.021819 -0.03048" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/jake_tail_STEP_v31Tail1Base1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="jake_RpiBoard_Fina_v81board1">
+  <inertial>
+    <origin xyz="-0.03909564452415272 -0.024359927842207 0.0008999999999999564" rpy="0 0 0"/>
+    <mass value="0.0019394922620199428"/>
+    <inertia ixx="6.423355849237124e-07" iyy="1.3724438621632714e-06" izz="2.0137321212654904e-06" ixy="-2.0554887126757417e-09" iyz="-8.768114493062093e-22" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.120523 -0.024498 -0.09779" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/jake_RpiBoard_Fina_v81board1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+    <material/>
+  </visual>
+  <collision>
+    <origin xyz="-0.120523 -0.024498 -0.09779" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/jake_RpiBoard_Fina_v81board1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="Jake_Power_Coverter_Mount_v41Component1081">
+  <inertial>
+    <origin xyz="0.10970389090909091 -0.017229999999999995 0.08723467024128687" rpy="0 0 0"/>
+    <mass value="0.0009712920000000003"/>
+    <inertia ixx="7.100202563136745e-07" iyy="2.3900548131367455e-07" izz="9.423444169999999e-07" ixy="1.6212740006039342e-22" iyz="-1.6543612251060553e-24" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.02794 -0.01748 0.049804" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/Jake_Power_Coverter_Mount_v41Component1081.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+    <material/>
+  </visual>
+  <collision>
+    <origin xyz="0.02794 -0.01748 0.049804" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/Jake_Power_Coverter_Mount_v41Component1081.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="battery_case_v141actual_case_lol1">
+  <inertial>
+    <origin xyz="0.06307682179410651 0.0002588655651982208 0.006953933283610089" rpy="0 0 0"/>
+    <mass value="0.0051109196621821115"/>
+    <inertia ixx="2.162276597790557e-06" iyy="6.5273401464139246e-06" izz="7.887364728359264e-06" ixy="2.6968003831336055e-08" iyz="-3.104883297386938e-08" ixz="2.98422021036982e-07"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.03523 -0.0 -0.05588" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/battery_case_v141actual_case_lol1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+    <material/>
+  </visual>
+  <collision>
+    <origin xyz="-0.03523 -0.0 -0.05588" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/battery_case_v141actual_case_lol1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="jake_tail_STEP_v31Jake_Servo_with_Flywheel_v31Motor_w_Flywheel_Attached_31">
+  <inertial>
+    <origin xyz="0.09764364474378343 0.021659523977101358 -0.03076394170218196" rpy="0 0 0"/>
+    <mass value="0.05200108715424498"/>
+    <inertia ixx="7.3256973562342564e-06" iyy="1.3509763471514371e-05" izz="1.1411737965790372e-05" ixy="-2.36025032202081e-11" iyz="-1.7496585470946988e-10" ixz="4.3919712789236723e-07"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.096072 0.021654 -0.09187" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/jake_tail_STEP_v31Jake_Servo_with_Flywheel_v31Motor_w_Flywheel_Attached_31.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+    <material/>
+  </visual>
+  <collision>
+    <origin xyz="0.096072 0.021654 -0.09187" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/jake_tail_STEP_v31Jake_Servo_with_Flywheel_v31Motor_w_Flywheel_Attached_31.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="jake_RpiBoard_Fina_v81Raspberry_Pi_4_Model_B_v31PCB_RPi4ModelB1">
+  <inertial>
+    <origin xyz="-0.00012078223333916727 0.00017289459791625786 0.0008000000000000923" rpy="0 0 0"/>
+    <mass value="0.0138863396732554"/>
+    <inertia ixx="3.565290598003828e-06" iyy="8.339737472120781e-06" izz="1.1899106026451808e-05" ixy="-1.823302726790508e-08" iyz="-2.1440521477374477e-21" ixz="0.0"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.081523 2e-06 -0.09959" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/jake_RpiBoard_Fina_v81Raspberry_Pi_4_Model_B_v31PCB_RPi4ModelB1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+    <material/>
+  </visual>
+  <collision>
+    <origin xyz="-0.081523 2e-06 -0.09959" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/jake_RpiBoard_Fina_v81Raspberry_Pi_4_Model_B_v31PCB_RPi4ModelB1.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="Jake_Power_Coverter_Mount_v41Power_Converter_v11">
+  <inertial>
+    <origin xyz="0.010157872286075176 0.06288136529035002 -0.11052142350784536" rpy="0 0 0"/>
+    <mass value="0.03542582746378581"/>
+    <inertia ixx="5.7853326550539e-06" iyy="2.2881734396583897e-06" izz="6.432048791215163e-06" ixy="4.519653592846906e-08" iyz="7.321701690091683e-08" ixz="9.609819226387027e-08"/>
+  </inertial>
+  <visual>
+    <origin xyz="-0.073573 0.061514 -0.143517" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/Jake_Power_Coverter_Mount_v41Power_Converter_v11.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+    <material/>
+  </visual>
+  <collision>
+    <origin xyz="-0.073573 0.061514 -0.143517" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/Jake_Power_Coverter_Mount_v41Power_Converter_v11.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<link name="battery_case_v141TalentCell_Battery_v21">
+  <inertial>
+    <origin xyz="0.13053001766422823 -0.025127530314852983 -0.15183761630427373" rpy="0 0 0"/>
+    <mass value="0.3805639551859371"/>
+    <inertia ixx="0.00014360637975661603" iyy="0.0003636561935676562" izz="0.00047085041746723014" ixy="-1.7654085028514195e-06" iyz="-8.859257534293076e-08" ixz="3.946808970183707e-07"/>
+  </inertial>
+  <visual>
+    <origin xyz="0.023438 -0.025222 -0.225765" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/battery_case_v141TalentCell_Battery_v21.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+    <material name="silver"/>
+    <material/>
+  </visual>
+  <collision>
+    <origin xyz="0.023438 -0.025222 -0.225765" rpy="0 0 0"/>
+    <geometry>
+      <mesh filename="meshes/battery_case_v141TalentCell_Battery_v21.stl" scale="0.001 0.001 0.001"/>
+    </geometry>
+  </collision>
+</link>
+
+<joint name="Rigid_1" type="fixed">
+  <origin xyz="0.02253 -0.0254 0.020945" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="hipmount11"/>
+</joint>
+
+<joint name="Rigid_2" type="fixed">
+  <origin xyz="0.039972 -0.018882 -0.006829" rpy="0 0 0"/>
+  <parent link="hipmount11"/>
+  <child link="servo11Motor_w_Flywheel_Attached1"/>
+</joint>
+
+<joint name="Revolute_3" type="continuous">
+  <origin xyz="-0.026874 -0.023395 -0.000146" rpy="0 0 0"/>
+  <parent link="servo11Motor_w_Flywheel_Attached1"/>
+  <child link="hipmount21"/>
+  <axis xyz="1.0 -0.0 -0.0"/>
+</joint>
+<transmission name="Revolute_3_tran">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="Revolute_3">
+    <hardwareInterface>PositionJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="Revolute_3_actr">
+    <hardwareInterface>PositionJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<joint name="Rigid_4" type="fixed">
+  <origin xyz="0.041828 -0.0724 -0.000146" rpy="0 0 0"/>
+  <parent link="hipmount21"/>
+  <child link="servo21Motor_w_Flywheel_Attached_11"/>
+</joint>
+
+<joint name="Revolute_5" type="continuous">
+  <origin xyz="0.000449 0.059302 0.000146" rpy="0 0 0"/>
+  <parent link="servo21Motor_w_Flywheel_Attached_11"/>
+  <child link="thigh1"/>
+  <axis xyz="0.0 -1.0 -0.0"/>
+</joint>
+<transmission name="Revolute_5_tran">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="Revolute_5">
+    <hardwareInterface>PositionJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="Revolute_5_actr">
+    <hardwareInterface>PositionJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<joint name="Rigid_9" type="fixed">
+  <origin xyz="0.000113 -0.005195 -0.073777" rpy="0 0 0"/>
+  <parent link="calf1Main_Calf1"/>
+  <child link="foot1Component181"/>
+</joint>
+
+<joint name="Rigid_10" type="fixed">
+  <origin xyz="0.02253 0.0254 0.020945" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="hipmount1Mirror1"/>
+</joint>
+
+<joint name="Rigid_11" type="fixed">
+  <origin xyz="-0.018828 0.018882 0.021111" rpy="0 0 0"/>
+  <parent link="hipmount1Mirror1"/>
+  <child link="servo1Mirror1Motor_w_Flywheel_Attached_21"/>
+</joint>
+
+<joint name="Revolute_12" type="continuous">
+  <origin xyz="0.031926 0.023395 -0.028086" rpy="0 0 0"/>
+  <parent link="servo1Mirror1Motor_w_Flywheel_Attached_21"/>
+  <child link="hipmount2Mirror1"/>
+  <axis xyz="-1.0 -0.0 -0.0"/>
+</joint>
+<transmission name="Revolute_12_tran">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="Revolute_12">
+    <hardwareInterface>PositionJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="Revolute_12_actr">
+    <hardwareInterface>PositionJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<joint name="Rigid_13" type="fixed">
+  <origin xyz="-0.060869 0.038405 -0.078038" rpy="0 0 0"/>
+  <parent link="thigh1"/>
+  <child link="servo31Motor_w_Flywheel_Attached_1_11"/>
+</joint>
+
+<joint name="Revolute_14" type="continuous">
+  <origin xyz="0.061002 -0.037445 -0.010189" rpy="0 0 0"/>
+  <parent link="servo31Motor_w_Flywheel_Attached_1_11"/>
+  <child link="calf1Main_Calf1"/>
+  <axis xyz="-0.0 -1.0 0.0"/>
+</joint>
+<transmission name="Revolute_14_tran">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="Revolute_14">
+    <hardwareInterface>PositionJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="Revolute_14_actr">
+    <hardwareInterface>PositionJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<joint name="Rigid_15" type="fixed">
+  <origin xyz="0.041828 -0.051256 -0.028086" rpy="0 0 0"/>
+  <parent link="hipmount2Mirror1"/>
+  <child link="servo2Mirror1Motor_w_Flywheel_Attached_1_21"/>
+</joint>
+
+<joint name="Revolute_16" type="continuous">
+  <origin xyz="0.000449 0.064354 0.028086" rpy="0 0 0"/>
+  <parent link="servo2Mirror1Motor_w_Flywheel_Attached_1_21"/>
+  <child link="thighMirror1"/>
+  <axis xyz="-0.0 -1.0 -0.0"/>
+</joint>
+<transmission name="Revolute_16_tran">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="Revolute_16">
+    <hardwareInterface>PositionJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="Revolute_16_actr">
+    <hardwareInterface>PositionJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<joint name="Rigid_17" type="fixed">
+  <origin xyz="0.060868 0.033555 -0.078038" rpy="0 0 0"/>
+  <parent link="thighMirror1"/>
+  <child link="servo3Mirror1Motor_w_Flywheel_Attached_1_1_11"/>
+</joint>
+
+<joint name="Revolute_18" type="continuous">
+  <origin xyz="-0.060735 -0.034515 -0.010189" rpy="0 0 0"/>
+  <parent link="servo3Mirror1Motor_w_Flywheel_Attached_1_1_11"/>
+  <child link="calfMirror1Main_Calf_11"/>
+  <axis xyz="0.0 -1.0 -0.0"/>
+</joint>
+<transmission name="Revolute_18_tran">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="Revolute_18">
+    <hardwareInterface>PositionJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="Revolute_18_actr">
+    <hardwareInterface>PositionJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<joint name="Rigid_19" type="fixed">
+  <origin xyz="0.000113 0.005195 -0.073777" rpy="0 0 0"/>
+  <parent link="calfMirror1Main_Calf_11"/>
+  <child link="footMirror1Component231"/>
+</joint>
+
+<joint name="Rigid_20" type="fixed">
+  <origin xyz="-0.01524 -0.021819 0.03048" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="jake_tail_STEP_v31Tail1Base1"/>
+</joint>
+
+<joint name="Rigid_21" type="fixed">
+  <origin xyz="0.120523 0.024498 0.09779" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="jake_RpiBoard_Fina_v81board1"/>
+</joint>
+
+<joint name="Rigid_23" type="fixed">
+  <origin xyz="-0.02794 0.01748 -0.049804" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="Jake_Power_Coverter_Mount_v41Component1081"/>
+</joint>
+
+<joint name="Rigid_24" type="fixed">
+  <origin xyz="0.03523 0.0 0.05588" rpy="0 0 0"/>
+  <parent link="base_link"/>
+  <child link="battery_case_v141actual_case_lol1"/>
+</joint>
+
+<joint name="jake_tail_STEP_v31_Rigid 1" type="fixed">
+  <origin xyz="-0.080832 0.000165 0.06139" rpy="0 0 0"/>
+  <parent link="jake_tail_STEP_v31Tail1Base1"/>
+  <child link="jake_tail_STEP_v31Jake_Servo_with_Flywheel_v31Motor_w_Flywheel_Attached_31"/>
+</joint>
+
+<joint name="jake_RpiBoard_Fina_v81_Rigid 3" type="fixed">
+  <origin xyz="-0.039 -0.0245 0.0018" rpy="0 0 0"/>
+  <parent link="jake_RpiBoard_Fina_v81board1"/>
+  <child link="jake_RpiBoard_Fina_v81Raspberry_Pi_4_Model_B_v31PCB_RPi4ModelB1"/>
+</joint>
+
+<joint name="Jake_Power_Coverter_Mount_v41_Rigid 2" type="fixed">
+  <origin xyz="0.101513 -0.078994 0.193321" rpy="0 0 0"/>
+  <parent link="Jake_Power_Coverter_Mount_v41Component1081"/>
+  <child link="Jake_Power_Coverter_Mount_v41Power_Converter_v11"/>
+</joint>
+
+<joint name="battery_case_v141_Rigid 2" type="fixed">
+  <origin xyz="-0.058668 0.025222 0.169885" rpy="0 0 0"/>
+  <parent link="battery_case_v141actual_case_lol1"/>
+  <child link="battery_case_v141TalentCell_Battery_v21"/>
+</joint>
+
+</robot>

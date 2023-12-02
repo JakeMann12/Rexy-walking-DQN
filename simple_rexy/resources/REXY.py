@@ -8,7 +8,7 @@ from numpy import pi
 class Rexy:
     def __init__(self, client):
         self.client = client
-        f_name = r"C:\Users\jmann\Box\Dook Work\Robot Learning\robot_code\URDFs\feetasrigidjts\jake.urdf"
+        f_name = r"simple_rexy\resources\RexyURDF\jake.urdf"
         self.rexy = p.loadURDF(fileName=f_name,
                               basePosition=[0, 0, 0.18], #hardcoded
                               physicsClientId=client,
