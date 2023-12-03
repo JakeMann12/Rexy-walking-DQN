@@ -59,11 +59,13 @@ def main():
             print("Invalid observation:", observation)
 
         if done:
-            print(f"Episode finished after {step + 1} timesteps\nFinal Observation:\n{observation}")
+            input(f"Episode finished after {step + 1} timesteps\nFinal Observation:\n{observation}. hit enter to continue")
+            plot_results(rewards, xy_positions)
             break
 
-    # Call the plot_results function to plot the collected data
-    plot_results(rewards, xy_positions)
+        if step == steps - 1:
+            plot_results(rewards, xy_positions)
+
     env.close()
 
 if __name__ == '__main__':

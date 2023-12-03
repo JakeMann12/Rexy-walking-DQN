@@ -40,6 +40,7 @@ class SimpleRexyEnv(gym.Env):
         self.rendered_img = None
         self.render_rot_matrix = None
         self.reset()
+        self.first_obs = self.rexy.get_observation()
 
     def step(self, action):
         print("=====  STEPTIME  =====\n") if self.DEBUG_MODE else None
@@ -65,7 +66,7 @@ class SimpleRexyEnv(gym.Env):
         Closeness to goal
         Being pointed towards the goal (yaw)
             - penalty if not
-        Being pointed towards the horizon (roll)
+        Punishes for tilting downwards too far (pitch)
             - breaks if outside of range (fell over)
             NOTE: would it be easier to make it such that if any part of the robot besides feet made ground contact?
         """
@@ -77,28 +78,27 @@ class SimpleRexyEnv(gym.Env):
         
         reward = max(self.prev_dist_to_goal - dist_to_goal, 0)
 
-        """# Additional reward modifications or calculations can be done here
-
-        # Penalize if the robot is not facing forwards
-        forward_direction = np.array([1, 0])  # Assuming your forward direction is along the x-axis
-        current_direction = np.array([math.cos(rexy_ob[2]), math.sin(rexy_ob[2])])
+        # Penalize if the robot is not facing forwards (based on yaw angle)
+        yaw_angle = rexy_ob[5]
+        forward_yaw_threshold = pi/2  # Adjust as needed
         alignment_penalty = -10  # Adjust as needed
 
-        alignment_reward = np.dot(forward_direction, current_direction)
-        if alignment_reward < 0.8:  # Example threshold, adjust as needed
+        if abs(yaw_angle) > forward_yaw_threshold:
             reward += alignment_penalty
             print("Alignment penalty applied") if self.DEBUG_MODE else None
 
-        # Penalize if the robot is not upright
-        orientation_quaternion = rexy_ob[1]  # Assuming orientation is the second element
-        orientation_euler = p.getEulerFromQuaternion(orientation_quaternion)
-        tilt_penalty = -10  # Adjust as needed
+        # Penalize if the robot is not upright (based on pitch angle)
+        pitch_angle = rexy_ob[4]
+        pitchdegrees = 45 # If it falls this many degrees under the horizon, game over
+        max_pitch_threshold = np.radians(pitchdegrees)  # Adjust as needed
+        tipping_penalty = -100  # Adjust as needed
 
-        # Check the pitch angle (rotation around the y-axis)
-        pitch_angle = orientation_euler[1]
-        if abs(pitch_angle) > 0.2:  # Example threshold, adjust as needed
-            reward += tilt_penalty
-            print("Tilt penalty applied") if self.DEBUG_MODE else None"""
+        pitch_difference = abs(pitch_angle - self.first_obs[4])
+
+        if pitch_difference > max_pitch_threshold:
+            reward += tipping_penalty
+            print("Tipping penalty applied") if self.DEBUG_MODE else None
+            self.done = True  # End the episode if tipping occurs
 
         # Update prev_dist_to_goal for the next step
         self.prev_dist_to_goal = dist_to_goal
