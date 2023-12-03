@@ -24,7 +24,7 @@ class SimpleRexyEnv(gym.Env):
     SURVIVAL_REWARD = 1  # Small positive reward for staying alive
     TIME_PENALTY_SCALE = 0.01  # Adjust as needed
     
-    def __init__(self, self_collision_enabled = True):
+    def __init__(self, client = p.connect(p.GUI), self_collision_enabled = True):
         self._self_collision_enabled = self_collision_enabled
         self.servoindices = [2, 4, 6, 10, 12, 14] #hardcoded
 
@@ -32,12 +32,12 @@ class SimpleRexyEnv(gym.Env):
             low = np.float32(-.4*pi*np.ones_like(self.servoindices)), # < -.4 * 180 degrees for all - prob overkill still
             high = np.float32(.4*pi*np.ones_like(self.servoindices)))
         self.observation_space = gym.spaces.box.Box(
-            # x, y, z positions, roll, pitch, yaw angles, x and y velocity components, and x and y position of goal
-            low =np.float32(np.array([-10, -5,  0, -pi, -pi/2, -pi, -1, -1,  0,  0])),
-            high=np.float32(np.array([ 10,  5,  1,  pi,  pi/2,  pi,  5,  5, 10, 10]))) 
+            # x, y, z positions, roll, pitch, yaw angles, x and y velocity components. NOTE: REMOVED x and y position of goal
+            low =np.float32(np.array([-10, -5,  0, -pi, -pi/2, -pi, -1, -1])),
+            high=np.float32(np.array([ 10,  5,  1,  pi,  pi/2,  pi,  5,  5]))) 
         
         self.np_random, _ = gym.utils.seeding.np_random()
-        self.client = p.connect(p.GUI) # NOTE : GUI OR DIRECT
+        self.client = client # NOTE : GUI OR DIRECT
         # Reduce length of episodes for RL algorithms
         p.setTimeStep(1/30, self.client)
 
@@ -63,12 +63,13 @@ class SimpleRexyEnv(gym.Env):
         p.stepSimulation()
         print("After stepSimulation") if self.DEBUG_MODE else None
         rexy_ob = self.rexy.get_observation()
+
+        ob = np.array(rexy_ob, dtype=np.float32)
         reward = self.compute_reward(rexy_ob)
-        print("After compute_reward") if self.DEBUG_MODE else None
-        ob = np.array(rexy_ob + self.goal, dtype=np.float32)
-        print("After array conversion") if self.DEBUG_MODE else None
+        done = self.done
+        
         self.current_step += 1  # Increment the current step at each call to step()
-        return ob, reward, self.done, dict()
+        return ob, reward, done, dict()
 
     def compute_reward(self, rexy_ob):
         """
@@ -118,17 +119,10 @@ class SimpleRexyEnv(gym.Env):
 
         print(f"DONE COMPUTING REWARD: {reward:.3f}") if self.DEBUG_MODE else None
         return reward
-    
-    def seed(self, seed: int) -> None:
-        """
-        Set the seeds for random and numpy
-        Args: seed (int): The seed to set
-        """
-        np.random.seed(seed)
-        random.seed(seed)
         
-    def reset(self):
+    def reset(self, seed = None, options = {}):
         print("=== Resetting Environment ===") if self.DEBUG_MODE else None
+        options, seed = options, seed #Worthless- avoids an error
 
         # Reset the simulation and gravity
         p.resetSimulation(self.client)
@@ -159,10 +153,10 @@ class SimpleRexyEnv(gym.Env):
 
         print(f"Prev dist to goal: {self.prev_dist_to_goal:.3f}") if self.DEBUG_MODE else None
 
-        observation = np.array(rexy_ob + self.goal, dtype=np.float32)
+        observation = np.array(rexy_ob, dtype=np.float32)
         info = {}
 
-        print(f"Observation (get_obs + goal pos): {observation}") if self.DEBUG_MODE else None
+        print(f"Observation (get_obs): {observation}") if self.DEBUG_MODE else None
         print(f"Info: {info}") if self.DEBUG_MODE else None
         print("=== Reset Complete ===") if self.DEBUG_MODE else None
 

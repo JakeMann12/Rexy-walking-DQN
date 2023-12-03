@@ -1,7 +1,5 @@
 import pybullet as p
-import os
-import math
-from numpy import pi
+import numpy as np
 
 #%% NOTE: REQUIRES HEAVY EDITING
 
@@ -45,4 +43,4 @@ class Rexy:
         vel = p.getBaseVelocity(self.rexy, self.client)[0][0:2]
         # Concatenate position, orientation, velocity
         observation = (pos[0], pos[1], pos[2], rpy[0], rpy[1], rpy[2], vel[0], vel[1])
-        return observation
+        return np.array(observation, dtype=np.float32)
