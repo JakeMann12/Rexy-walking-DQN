@@ -3,6 +3,7 @@ import gym
 from gym import error, spaces, utils
 from gym.utils import seeding
 import numpy as np
+from numpy import pi
 import math
 import pybullet as p
 import matplotlib.pyplot as plt
@@ -19,17 +20,14 @@ class SimpleRexyEnv(gym.Env):
         self.servoindices = [2, 4, 6, 10, 12, 14] #hardcoded
 
         self.action_space = gym.spaces.box.Box(
-            # NOTE : set values to 0?
-            #low=np.array([30,30,25,20,20,100], dtype=np.float32), # LOW VALUES FOR EACH SERVO
-            #high=np.array([210,150,160,220,178,230], dtype=np.float32)) #HIGH VALUES FOR EACH SERVO 
-            low = np.float32(-.4*np.pi*np.ones_like(self.servoindices)), # < -.4 * 180 degrees for all- prob overkill still
-            high = np.float32(.4*np.pi*np.ones_like(self.servoindices)))
+            low = np.float32(-.4*pi*np.ones_like(self.servoindices)), # < -.4 * 180 degrees for all - prob overkill still
+            high = np.float32(.4*pi*np.ones_like(self.servoindices)))
         self.observation_space = gym.spaces.box.Box(
-            low=np.float32(np.array([-10, -10, -1, -1, -5, -5, 0, 0])),
-            high=np.float32(np.array([10, 10, 1, 1, 5, 5, 10, 10]))) #NOTE: Fixed x bounds
-        # consisting of xy position of the rexy, unit xy orientation of the rexy, xy velocity of the rexy, and xy position of a target we want to reach.
+            # x, y, z positions, roll, pitch, yaw angles, x and y velocity components, and x and y position of goal
+            low =np.float32(np.array([-10, -5,  0, -pi, -pi/2, -pi, -1, -1,  0,  0])),
+            high=np.float32(np.array([ 10,  5,  1,  pi,  pi/2,  pi,  5,  5, 10, 10]))) 
+        
         self.np_random, _ = gym.utils.seeding.np_random()
-
         self.client = p.connect(p.GUI) # NOTE : GUI OR DIRECT
         # Reduce length of episodes for RL algorithms
         p.setTimeStep(1/30, self.client)
@@ -63,9 +61,13 @@ class SimpleRexyEnv(gym.Env):
     def compute_reward(self, rexy_ob):
 
         """
-        NOTE: I am functionally rewriting get_observation in the reward function to include rpy. 
-        I could have changed it throughout the code, but the RPY is only important for if the 
-        clown falls over, and it's integrated elsewhere and I don't wanna mess with it. It'll be fine.... right?
+        Takes 8-part rexy obs (x y z r p y v_x v_y) and rewards for:
+        Closeness to goal
+        Being pointed towards the goal (yaw)
+            - penalty if not
+        Being pointed towards the horizon (roll)
+            - breaks if outside of range (fell over)
+            NOTE: would it be easier to make it such that if any part of the robot besides feet made ground contact?
         """
         
         print("------COMPUTEREWARD TIME--------\n") if self.DEBUG_MODE else None
@@ -105,7 +107,8 @@ class SimpleRexyEnv(gym.Env):
         return reward
 
     def seed(self, seed: int) -> None:
-        """Set the seeds for random and numpy
+        """
+        Set the seeds for random and numpy
         Args: seed (int): The seed to set
         """
         np.random.seed(seed)
@@ -116,7 +119,7 @@ class SimpleRexyEnv(gym.Env):
 
         # Reset the simulation and gravity
         p.resetSimulation(self.client)
-        p.setGravity(0, 0, -9.81)  # m/s^2
+        p.setGravity(0, 0, -9.81) #-9.81)  # m/s^2
 
         # Reload the plane and rexy
         print("Loading Plane...") if self.DEBUG_MODE else None
@@ -125,7 +128,7 @@ class SimpleRexyEnv(gym.Env):
         print("Creating Rexy...") if self.DEBUG_MODE else None
         self.rexy = Rexy(self.client)
 
-        # Set the goal to a random target
+        # Set the goal to a target
         x = 7  # Hardcoded value for now
         y = 0
         self.goal = (x, y)
@@ -146,8 +149,8 @@ class SimpleRexyEnv(gym.Env):
         observation = np.array(rexy_ob + self.goal, dtype=np.float32)
         info = {}
 
-        print(f"Observation: {observation}") if self.DEBUG_MODE else None
-        print(f"Observation: {info}") if self.DEBUG_MODE else None
+        print(f"Observation (get_obs + goal pos): {observation}") if self.DEBUG_MODE else None
+        print(f"Info: {info}") if self.DEBUG_MODE else None
         print("=== Reset Complete ===") if self.DEBUG_MODE else None
 
         return observation, info

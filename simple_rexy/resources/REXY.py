@@ -14,20 +14,15 @@ class Rexy:
                               physicsClientId=client,
                               flags=p.URDF_USE_INERTIA_FROM_FILE) #NOTE: added this in extra from hello_bullet
         self.servo_joints = [2, 4, 6, 10, 12, 14] #steering joints, I believe, with reference to the other shit
+        self.max_force = 100 #NOTE: WHAT IS THIS
 
     def get_ids(self):
         return self.client, self.rexy
 
     def apply_action(self, action): #NOTE: THIS IS WHERE WE ARE GOING TO SEE ISSUES I BET
-        # Expects action to be SIX DIMENSIONAL
-
-        # Clip throttle and steering angle to reasonable values - we don't need throttle
-        #throttle = min(max(throttle, 0), 1)
-
-        #servo_angles = max(min(servo_angles, .4*pi), -.4*pi) #NOTE: should these be clipped to the bounds in the action space?
-
-        # Define parameters for joint control
-        max_force = 100.0  # You can adjust the maximum force as needed
+        """
+        Takes SIX-DIMENSIONAL ACTION INPUT and applies it to the servo joints via Joint Control
+        """
         for i, joint_index in enumerate(self.servo_joints):
             # Apply control to each joint individually
             target_position = action[i]  # Set the desired position for the joint
@@ -36,26 +31,18 @@ class Rexy:
                 jointIndex=joint_index,
                 controlMode=p.POSITION_CONTROL,  # Use POSITION_CONTROL for position control
                 targetPosition=target_position,
-                force=max_force
+                force=self.max_force
             )
     
     def get_observation(self):
         """
-        returns a 6-element tuple representing: 
-        the position (X, Y)
-        orientation (cosine and sine of the Z-axis Euler angle)
-        velocity (X, Y) of Rexy in the simulation
+        returns the x, y, z positions, and the roll, pitch, yaw angles, along with the x and y velocity components
         """
-
         # Get the position and orientation of the rexy in the simulation
-        pos, ang = p.getBasePositionAndOrientation(self.rexy, self.client)
-        ang = p.getEulerFromQuaternion(ang)
-        ori = (math.cos(ang[2]), math.sin(ang[2]))
-        pos = pos[:2]
+        pos, orientation = p.getBasePositionAndOrientation(self.rexy, self.client)
+        rpy = p.getEulerFromQuaternion(orientation)
         # Get the velocity of the rexy
         vel = p.getBaseVelocity(self.rexy, self.client)[0][0:2]
-
         # Concatenate position, orientation, velocity
-        observation = (pos + ori + vel)
-
+        observation = (pos[0], pos[1], pos[2], rpy[0], rpy[1], rpy[2], vel[0], vel[1])
         return observation

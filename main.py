@@ -45,6 +45,7 @@ def main():
     steps = 500
     for step in range(steps):
         action = env.action_space.sample()
+        #action = np.zeros(6) #for testing
         observation, reward, done, info = env.step(action)
 
         rewards.append(reward)
