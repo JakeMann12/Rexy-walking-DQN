@@ -11,8 +11,6 @@ from simple_rexy.resources.plane import Plane #called in RESET FUNCT
 from simple_rexy.resources.goal import Goal #called in RESET FUNCT
 import random
 
-#print(Rexy.get_observation)
-
 class SimpleRexyEnv(gym.Env):
     metadata = {'render_modes': ['human', 'rgb_array']}  
     
@@ -56,7 +54,6 @@ class SimpleRexyEnv(gym.Env):
         p.stepSimulation()
         print("After stepSimulation") if self.DEBUG_MODE else None
         rexy_ob = self.rexy.get_observation()
-        print("After get_observation") if self.DEBUG_MODE else None
         reward = self.compute_reward(rexy_ob)
         print("After compute_reward") if self.DEBUG_MODE else None
         ob = np.array(rexy_ob + self.goal, dtype=np.float32)
@@ -64,6 +61,13 @@ class SimpleRexyEnv(gym.Env):
         return ob, reward, self.done, dict()
 
     def compute_reward(self, rexy_ob):
+
+        """
+        NOTE: I am functionally rewriting get_observation in the reward function to include rpy. 
+        I could have changed it throughout the code, but the RPY is only important for if the 
+        clown falls over, and it's integrated elsewhere and I don't wanna mess with it. It'll be fine.... right?
+        """
+        
         print("------COMPUTEREWARD TIME--------\n") if self.DEBUG_MODE else None
         # Compute reward as L2 change in distance to goal
         dist_to_goal = math.sqrt(((rexy_ob[0] - self.goal[0]) ** 2 +

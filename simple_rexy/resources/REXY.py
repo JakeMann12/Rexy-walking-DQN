@@ -27,21 +27,26 @@ class Rexy:
         #servo_angles = max(min(servo_angles, .4*pi), -.4*pi) #NOTE: should these be clipped to the bounds in the action space?
 
         # Define parameters for joint control
-        control_mode = p.POSITION_CONTROL  # Use POSITION_CONTROL for position control
         max_force = 100.0  # You can adjust the maximum force as needed
-
         for i, joint_index in enumerate(self.servo_joints):
             # Apply control to each joint individually
             target_position = action[i]  # Set the desired position for the joint
             p.setJointMotorControl2(
                 bodyUniqueId=self.rexy,
                 jointIndex=joint_index,
-                controlMode=control_mode,
+                controlMode=p.POSITION_CONTROL,  # Use POSITION_CONTROL for position control
                 targetPosition=target_position,
                 force=max_force
             )
     
     def get_observation(self):
+        """
+        returns a 6-element tuple representing: 
+        the position (X, Y)
+        orientation (cosine and sine of the Z-axis Euler angle)
+        velocity (X, Y) of Rexy in the simulation
+        """
+
         # Get the position and orientation of the rexy in the simulation
         pos, ang = p.getBasePositionAndOrientation(self.rexy, self.client)
         ang = p.getEulerFromQuaternion(ang)
@@ -54,14 +59,3 @@ class Rexy:
         observation = (pos + ori + vel)
 
         return observation
-
-    
-
-
-
-
-
-
-
-
-

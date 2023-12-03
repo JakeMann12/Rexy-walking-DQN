@@ -51,8 +51,8 @@ def main():
         xy_positions.append((observation[0], observation[1]))
 
         if step == 1:  # Print observation for comparison
-            print(f"Initial Observation:\n{observation}\n")
-            print(f"Rexy Observation:\n{env.rexy.get_observation()}\n")
+            #If cos(Z) is close to 1, the object is mostly aligned with the X-axis. If sin(Z) is close to 1, the object is mostly aligned with the Y-axis.
+            print(f"Rexy Observation (XY position, cosine and sine of the Z-axis Euler angle, and XY velocity):\n{env.rexy.get_observation()}\n")
 
         if not env.observation_space.contains(observation):
             print("Invalid observation:", observation)
