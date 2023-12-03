@@ -14,6 +14,15 @@ import random
 
 class SimpleRexyEnv(gym.Env):
     metadata = {'render_modes': ['human', 'rgb_array']}  
+
+    #Reward Function Tuning Vals
+    FORWARD_YAW_THRESHOLD = pi / 3
+    ALIGNMENT_PENALTY = -10
+    PITCH_DEGREES = 45
+    MAX_PITCH_THRESHOLD = np.radians(PITCH_DEGREES)
+    TIPPING_PENALTY = -75
+    SURVIVAL_REWARD = 1  # Small positive reward for staying alive
+    TIME_PENALTY_SCALE = 0.01  # Adjust as needed
     
     def __init__(self, self_collision_enabled = True):
         self._self_collision_enabled = self_collision_enabled
@@ -40,6 +49,7 @@ class SimpleRexyEnv(gym.Env):
         self.rendered_img = None
         self.render_rot_matrix = None
         self.reset()
+        self.current_step = 0  # Initialize the current step
         self.first_obs = self.rexy.get_observation()
 
     def step(self, action):
@@ -57,55 +67,58 @@ class SimpleRexyEnv(gym.Env):
         print("After compute_reward") if self.DEBUG_MODE else None
         ob = np.array(rexy_ob + self.goal, dtype=np.float32)
         print("After array conversion") if self.DEBUG_MODE else None
+        self.current_step += 1  # Increment the current step at each call to step()
         return ob, reward, self.done, dict()
 
     def compute_reward(self, rexy_ob):
-
         """
         Takes 8-part rexy obs (x y z r p y v_x v_y) and rewards for:
-        Closeness to goal
-        Being pointed towards the goal (yaw)
+        1. Closeness to goal
+        2. Being pointed towards the goal (yaw)
             - penalty if not
-        Punishes for tilting downwards too far (pitch)
+        3. Punishes for tilting downwards too far (pitch)
             - breaks if outside of range (fell over)
-            NOTE: would it be easier to make it such that if any part of the robot besides feet made ground contact?
+        4. Survival reward for staying alive
+        5. Time-dependent penalty for taking too long
         """
         
         print("------COMPUTEREWARD TIME--------\n") if self.DEBUG_MODE else None
+
         # Compute reward as L2 change in distance to goal
         dist_to_goal = math.sqrt(((rexy_ob[0] - self.goal[0]) ** 2 +
                                 (rexy_ob[1] - self.goal[1]) ** 2))
         
-        reward = max(self.prev_dist_to_goal - dist_to_goal, 0)
+        reward = max(self.prev_dist_to_goal - dist_to_goal, 0) * 100
 
         # Penalize if the robot is not facing forwards (based on yaw angle)
         yaw_angle = rexy_ob[5]
-        forward_yaw_threshold = pi/2  # Adjust as needed
-        alignment_penalty = -10  # Adjust as needed
 
-        if abs(yaw_angle) > forward_yaw_threshold:
-            reward += alignment_penalty
+        if abs(yaw_angle) > self.FORWARD_YAW_THRESHOLD:
+            reward += self.ALIGNMENT_PENALTY
             print("Alignment penalty applied") if self.DEBUG_MODE else None
 
         # Penalize if the robot is not upright (based on pitch angle)
         pitch_angle = rexy_ob[4]
-        pitchdegrees = 45 # If it falls this many degrees under the horizon, game over
-        max_pitch_threshold = np.radians(pitchdegrees)  # Adjust as needed
-        tipping_penalty = -100  # Adjust as needed
-
         pitch_difference = abs(pitch_angle - self.first_obs[4])
 
-        if pitch_difference > max_pitch_threshold:
-            reward += tipping_penalty
+        if pitch_difference > self.MAX_PITCH_THRESHOLD:
+            reward += self.TIPPING_PENALTY
             print("Tipping penalty applied") if self.DEBUG_MODE else None
             self.done = True  # End the episode if tipping occurs
+
+        # Survival reward for staying alive
+        reward += self.SURVIVAL_REWARD
+
+        # Time-dependent penalty for taking too long
+        time_penalty = -self.TIME_PENALTY_SCALE * self.current_step
+        reward += time_penalty
 
         # Update prev_dist_to_goal for the next step
         self.prev_dist_to_goal = dist_to_goal
 
         print(f"DONE COMPUTING REWARD: {reward:.3f}") if self.DEBUG_MODE else None
         return reward
-
+    
     def seed(self, seed: int) -> None:
         """
         Set the seeds for random and numpy
@@ -129,7 +142,7 @@ class SimpleRexyEnv(gym.Env):
         self.rexy = Rexy(self.client)
 
         # Set the goal to a target
-        x = 7  # Hardcoded value for now
+        x = 3  # Hardcoded value for now
         y = 0
         self.goal = (x, y)
         self.done = False

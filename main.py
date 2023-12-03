@@ -59,7 +59,7 @@ def main():
             print("Invalid observation:", observation)
 
         if done:
-            input(f"Episode finished after {step + 1} timesteps\nFinal Observation:\n{observation}. hit enter to continue")
+            print(f"Episode finished after {step + 1} timesteps\nFinal Observation:\n{observation}. hit enter to continue")
             plot_results(rewards, xy_positions)
             break
 
