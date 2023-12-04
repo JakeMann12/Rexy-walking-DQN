@@ -11,18 +11,6 @@ import copy
 from tqdm import tqdm
 from simple_rexy.envs.rexy_env import SimpleRexyEnv
 
-
-# Hyperparameters
-BATCH_SIZE = 128
-LR = 0.01  # learning rate
-GAMMA = 0.90
-EPSILON = 0.9
-EPSILON_DECAY = 0.995
-EPSILON_MIN = 0.01
-MEMORY_CAPACITY = 2000
-Q_NETWORK_ITERATION = 100  # how many steps before updating the network
-
-
 # Define the neural network for DQN
 class Net(nn.Module):
     def __init__(self, num_states, num_actions):
@@ -43,7 +31,9 @@ class Net(nn.Module):
 
 # Define the DQN agent
 class DQNAgent:
-    def __init__(self, env, render=False, debug=True):
+    def __init__(self, env, render=False, debug=True, BATCH_SIZE = 128, LR = 0.01, GAMMA = 0.90, 
+                 EPSILON = 0.9, EPSILON_DECAY = 0.995, EPSILON_MIN = 0.01, MEMORY_CAPACITY = 2000, 
+                 Q_NETWORK_ITERATION = 100):
         # ESTABLISH REXY ENV
         self.env = gym.make(env).unwrapped
         self.num_actions = self.env.action_space.shape[0]
@@ -58,6 +48,11 @@ class DQNAgent:
         # Experience replay
         self.memory = deque(maxlen=MEMORY_CAPACITY)
 
+        #Batch, Gamma
+        self.batch_size = BATCH_SIZE
+        self.gamma = GAMMA
+        self.q_network_iteration = Q_NETWORK_ITERATION
+
         # Epsilon-greedy strategy
         self.epsilon = EPSILON
         self.epsilon_decay = EPSILON_DECAY
@@ -69,10 +64,11 @@ class DQNAgent:
         # Rewards!
         self.episode_rewards = []
 
+        # Debug
         self.DEBUG_MODE = debug
 
     def select_action(self, state):
-        if np.random.rand() <= EPSILON:
+        if np.random.rand() <= self.epsilon:
             action = self.env.action_space.sample()  # RANDOM ACTION
             # print(f"SAMPLE ACTION TYPE: {type(action)}\n") if self.DEBUG_MODE else None
         else:
@@ -106,7 +102,7 @@ class DQNAgent:
         q_values = self.q_network(states)
         target_q_values = self.target_network(next_states).detach()
 
-        target = rewards + GAMMA * (1 - dones) * target_q_values.max(dim=1)[0]
+        target = rewards + self.gamma * (1 - dones) * target_q_values.max(dim=1)[0]
         target = target.unsqueeze(1).expand_as(q_values)
         loss = self.loss_fn(
             q_values, target
@@ -118,7 +114,7 @@ class DQNAgent:
 
         # Update target network
         self.update_counter += 1
-        if self.update_counter % Q_NETWORK_ITERATION == 0:
+        if self.update_counter % self.q_network_iteration == 0:
             self.target_network.load_state_dict(self.q_network.state_dict())
 
         # Decay epsilon
@@ -133,7 +129,7 @@ class DQNAgent:
                 action = self.select_action(state)
                 next_state, reward, done, _ = self.env.step(action)
                 self.remember(state, action, reward, next_state, done)
-                self.replay(BATCH_SIZE)
+                self.replay(self.batch_size)
 
                 total_reward += reward
                 state = next_state
@@ -176,12 +172,3 @@ class DQNAgent:
             print("Model loaded successfully.")
         else:
             print("Agent Model file not found.")
-
-
-if __name__ == "__main__":
-    # Initialize DQNAgent
-    agent = DQNAgent("rexy-v0", render=True, debug=True)
-
-    agent.load_model("agent.pth")
-    # Train the agent
-    agent.train(num_episodes=200, save=False)  # not saving yet
