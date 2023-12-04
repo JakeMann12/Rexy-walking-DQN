@@ -25,7 +25,7 @@ class SimpleRexyEnv(gym.Env):
     TIME_PENALTY_SCALE = 0.01  # Adjust as needed
     MAX_STEPS_EPISODE = 800 #how long it can go
     
-    def __init__(self, client = p.connect(p.GUI), self_collision_enabled = True):
+    def __init__(self, client = p.connect(p.DIRECT), self_collision_enabled = True): # NOTE : GUI OR DIRECT
         self._self_collision_enabled = self_collision_enabled
         self.servoindices = [2, 4, 6, 10, 12, 14] #hardcoded
 
@@ -38,7 +38,7 @@ class SimpleRexyEnv(gym.Env):
             high=np.float32(np.array([ 10,  5,  1,  pi,  pi/2,  pi,  5,  5]))) 
         
         self.np_random, _ = gym.utils.seeding.np_random()
-        self.client = client # NOTE : GUI OR DIRECT
+        self.client = client 
         # Reduce length of episodes for RL algorithms
         p.setTimeStep(1/30, self.client)
 

@@ -2,23 +2,35 @@ import pybullet as p
 import numpy as np
 import torch
 
-#%% NOTE: REQUIRES HEAVY EDITING
+# %% NOTE: REQUIRES HEAVY EDITING
+
 
 class Rexy:
     def __init__(self, client):
         self.client = client
         f_name = r"simple_rexy\resources\RexyURDF\jake.urdf"
-        self.rexy = p.loadURDF(fileName=f_name,
-                              basePosition=[0, 0, 0.18], #hardcoded
-                              physicsClientId=client,
-                              flags=p.URDF_USE_INERTIA_FROM_FILE) #NOTE: added this in extra from hello_bullet
-        self.servo_joints = [2, 4, 6, 10, 12, 14] #steering joints, I believe, with reference to the other shit
-        self.max_force = 100 #NOTE: WHAT IS THIS
+        self.rexy = p.loadURDF(
+            fileName=f_name,
+            basePosition=[0, 0, 0.18],  # hardcoded
+            physicsClientId=client,
+            flags=p.URDF_USE_INERTIA_FROM_FILE,
+        )  # NOTE: added this in extra from hello_bullet
+        self.servo_joints = [
+            2,
+            4,
+            6,
+            10,
+            12,
+            14,
+        ]  # steering joints, I believe, with reference to the other shit
+        self.max_force = 100  # NOTE: WHAT IS THIS
 
     def get_ids(self):
         return self.client, self.rexy
 
-    def apply_action(self, action): #NOTE: THIS IS WHERE WE ARE GOING TO SEE ISSUES I BET
+    def apply_action(
+        self, action
+    ):  # NOTE: THIS IS WHERE WE ARE GOING TO SEE ISSUES I BET
         """
         Takes SIX-DIMENSIONAL ACTION INPUT and applies it to the servo joints via Joint Control
         """
@@ -30,9 +42,9 @@ class Rexy:
                 jointIndex=joint_index,
                 controlMode=p.POSITION_CONTROL,  # Use POSITION_CONTROL for position control
                 targetPosition=target_position,
-                force=self.max_force
+                force=self.max_force,
             )
-    
+
     def get_observation(self):
         """
         returns the x, y, z positions, and the roll, pitch, yaw angles, along with the x and y velocity components

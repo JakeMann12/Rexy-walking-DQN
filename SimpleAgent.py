@@ -9,26 +9,19 @@ import random
 import gym
 import copy
 from tqdm import tqdm
+from simple_rexy.envs.rexy_env import SimpleRexyEnv
 
-#ESTABLISH REXY ENV
-env = gym.make('rexy-v0')
-client = env.client
-env = env.unwrapped
-NUM_ACTIONS = env.action_space.shape[0]
-NUM_STATES = env.observation_space.shape[0]
 
 # Hyperparameters
 BATCH_SIZE = 128
-LR = 0.01 #learning rate
+LR = 0.01  # learning rate
 GAMMA = 0.90
 EPSILON = 0.9
-EPSILON_DECAY = .995
-EPSILON_MIN = .01
+EPSILON_DECAY = 0.995
+EPSILON_MIN = 0.01
 MEMORY_CAPACITY = 2000
-Q_NETWORK_ITERATION = 100 #how many steps before updating the network
+Q_NETWORK_ITERATION = 100  # how many steps before updating the network
 
-#DEBUGGING TOGGLE
-debug = True
 
 # Define the neural network for DQN
 class Net(nn.Module):
@@ -46,15 +39,18 @@ class Net(nn.Module):
         x = F.relu(self.fc2(x))
         action_values = self.out(x)
         return action_values
-    
+
+
 # Define the DQN agent
 class DQNAgent:
-    def __init__(self, num_states, num_actions):
-        self.num_states = num_states
-        self.num_actions = num_actions
+    def __init__(self, env, render=False, debug=True):
+        # ESTABLISH REXY ENV
+        self.env = gym.make(env).unwrapped
+        self.num_actions = self.env.action_space.shape[0]
+        self.num_states = self.env.observation_space.shape[0]
 
         # Q-Networks
-        self.q_network = Net(num_states, num_actions)
+        self.q_network = Net(self.num_states, self.num_actions)
         self.target_network = copy.deepcopy(self.q_network)
         self.optimizer = torch.optim.Adam(self.q_network.parameters(), lr=LR)
         self.loss_fn = nn.MSELoss()
@@ -70,24 +66,24 @@ class DQNAgent:
         # Counter for Q-network updates
         self.update_counter = 0
 
-        #Rewards!
+        # Rewards!
         self.episode_rewards = []
 
         self.DEBUG_MODE = debug
 
     def select_action(self, state):
         if np.random.rand() <= EPSILON:
-            action = env.action_space.sample() #RANDOM ACTION
-            #print(f"SAMPLE ACTION TYPE: {type(action)}\n") if self.DEBUG_MODE else None
+            action = self.env.action_space.sample()  # RANDOM ACTION
+            # print(f"SAMPLE ACTION TYPE: {type(action)}\n") if self.DEBUG_MODE else None
         else:
             with torch.no_grad():
                 state = torch.FloatTensor(state)
                 q_values = self.q_network(state)
                 action = q_values.numpy()
-                #print(f"Q ACTION TYPE: {type(action)}\n") if self.DEBUG_MODE else None
+                # print(f"Q ACTION TYPE: {type(action)}\n") if self.DEBUG_MODE else None
 
         return action
-    
+
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
 
@@ -99,11 +95,11 @@ class DQNAgent:
         states, actions, rewards, next_states, dones = zip(*batch)
 
         # Convert states to a tensor
-        states = torch.FloatTensor(states) #NOTE: may be silly
+        states = torch.FloatTensor(np.array(states))  # NOTE: may be silly
 
-        actions = torch.FloatTensor(actions)
+        actions = torch.FloatTensor(np.array(actions))
         rewards = torch.FloatTensor(rewards)
-        next_states = torch.FloatTensor(next_states)
+        next_states = torch.FloatTensor(np.array(next_states))
         dones = torch.FloatTensor(dones)
 
         # Q-learning update
@@ -111,7 +107,10 @@ class DQNAgent:
         target_q_values = self.target_network(next_states).detach()
 
         target = rewards + GAMMA * (1 - dones) * target_q_values.max(dim=1)[0]
-        loss = self.loss_fn(q_values, target.unsqueeze(1))
+        target = target.unsqueeze(1).expand_as(q_values)
+        loss = self.loss_fn(
+            q_values, target
+        )  # changed to make match in size during loss
 
         self.optimizer.zero_grad()
         loss.backward()
@@ -125,16 +124,14 @@ class DQNAgent:
         # Decay epsilon
         self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
 
-
-    def train(self, num_episodes):
-
+    def train(self, num_episodes, save=True):
         for episode in tqdm(range(num_episodes)):
-            state, _ = env.reset()
+            state, _ = self.env.reset()
             total_reward = 0
 
             while True:
                 action = self.select_action(state)
-                next_state, reward, done, _ = env.step(action)
+                next_state, reward, done, _ = self.env.step(action)
                 self.remember(state, action, reward, next_state, done)
                 self.replay(BATCH_SIZE)
 
@@ -146,40 +143,45 @@ class DQNAgent:
 
             if episode % 5 == 0:
                 print(f"Episode {episode}, Total Reward: {total_reward}")
-            
+
             # Append episode reward to the list
             self.episode_rewards.append(total_reward)
 
         # After training, plot and save the static results
         self.plot_rewards(self.episode_rewards)
-        print('boutta save the model')
-        self.save_model()
+
+        if save == True:
+            print("boutta save the model") if self.DEBUG_MODE else None
+            self.save_model()
 
     def plot_rewards(self, reward_list):
         plt.figure()
-        plt.plot(reward_list, label='Total Reward')
-        plt.xlabel('Episodes')
-        plt.ylabel('Total Reward')
-        plt.title('Total Reward per Episode')
+        plt.plot(reward_list, label="Total Reward")
+        plt.xlabel("Episodes")
+        plt.ylabel("Total Reward")
+        plt.title("Total Reward per Episode")
         plt.legend()
         plt.show()
 
     def save_model(self, model_path="dqn_model.pth"):
         torch.save(self.q_network.state_dict(), model_path)
+        print(f"model saved! to {model_path}")
 
     def load_model(self, model_path="dqn_model.pth"):
         if os.path.exists(model_path):
             self.q_network.load_state_dict(torch.load(model_path))
-            self.target_network.load_state_dict(self.q_network.state_dict())  # Ensure consistency with target network
+            self.target_network.load_state_dict(
+                self.q_network.state_dict()
+            )  # Ensure consistency with target network
             print("Model loaded successfully.")
         else:
-            print("Model file not found.")
+            print("Agent Model file not found.")
 
 
-if __name__=='__main__':
-
+if __name__ == "__main__":
     # Initialize DQNAgent
-    agent = DQNAgent(NUM_STATES, NUM_ACTIONS)
+    agent = DQNAgent("rexy-v0", render=True, debug=True)
 
+    agent.load_model("agent.pth")
     # Train the agent
-    agent.train(num_episodes=200)
+    agent.train(num_episodes=200, save=False)  # not saving yet

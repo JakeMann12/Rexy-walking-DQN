@@ -11,26 +11,27 @@ import copy
 from simple_rexy.resources.REXY import Rexy
 from tqdm import tqdm
 
-#ESTABLISH REXY ENV
-env = gym.make('rexy-v0')
+# ESTABLISH REXY ENV
+env = gym.make("rexy-v0")
 client = env.client
 env = env.unwrapped
 NUM_ACTIONS = env.action_space.shape[0]
 NUM_STATES = env.observation_space.shape[0]
 
-#ESTABLISH REXY
+# ESTABLISH REXY
 REXY = Rexy(client)
 
 # Hyperparameters
 BATCH_SIZE = 128
-LR = 0.01 #learning rate
+LR = 0.01  # learning rate
 GAMMA = 0.90
 EPSILON = 0.9
 MEMORY_CAPACITY = 2000
-Q_NETWORK_ITERATION = 100 #how many steps before updating the network
+Q_NETWORK_ITERATION = 100  # how many steps before updating the network
 
-#DEBUGGING TOGGLE
+# DEBUGGING TOGGLE
 debug = True
+
 
 # Define the neural network for DQN
 class Net(nn.Module):
@@ -49,10 +50,14 @@ class Net(nn.Module):
         action_values = self.out(x)
         return action_values
 
-class DQNAgent():
+
+class DQNAgent:
     """docstring for DQN"""
+
     def __init__(self):
-        self.eval_net, self.target_net = Net(NUM_STATES, NUM_ACTIONS), Net(NUM_STATES, NUM_ACTIONS)
+        self.eval_net, self.target_net = Net(NUM_STATES, NUM_ACTIONS), Net(
+            NUM_STATES, NUM_ACTIONS
+        )
 
         self.num_actions = NUM_ACTIONS
         self.learn_step_counter = 0
@@ -60,26 +65,27 @@ class DQNAgent():
         self.memory = deque(maxlen=MEMORY_CAPACITY)
         self.optimizer = torch.optim.Adam(self.eval_net.parameters(), lr=LR)
         self.loss_func = nn.MSELoss()
-        
+
         self.DEBUG_MODE = debug
 
-        #self.env_instance = SimpleRexyEnv()
-
+        # self.env_instance = SimpleRexyEnv()
 
     def choose_action(self, state):
         state = torch.FloatTensor(state)
         # print(f"State: {state}\n") if self.DEBUG_MODE else None
-        
+
         q_values = self.eval_net(state)
-        
+
         # Explore (with probability EPSILON) or exploit
-        #if np.random.rand() <= EPSILON:
+        # if np.random.rand() <= EPSILON:
         #    action = env.action_space.sample() #RANDOM ACTION
         #    print(f"SAMPLE ACTION TYPE: {type(action)}\n") if self.DEBUG_MODE else None
-        #else:
-        action = q_values.argmax(dim=1).detach().numpy()  # Argmax along the dimension of actions            
+        # else:
+        action = (
+            q_values.argmax(dim=1).detach().numpy()
+        )  # Argmax along the dimension of actions
         print(f"Q ACTION TYPE: {type(action)}\n") if self.DEBUG_MODE else None
-        
+
         return action
 
     def store_transition(self, state, action, reward, next_state):
@@ -93,7 +99,7 @@ class DQNAgent():
 
     def learn(self):
         if len(self.memory) < BATCH_SIZE:
-            print('Memory length is less than BATCH_SIZE') if self.DEBUG_MODE else None
+            print("Memory length is less than BATCH_SIZE") if self.DEBUG_MODE else None
             return
 
         # Sample a minibatch from the replay memory
@@ -126,18 +132,19 @@ class DQNAgent():
         # Update the target network periodically
         if self.learn_step_counter % Q_NETWORK_ITERATION == 0:
             self.target_net.load_state_dict(self.eval_net.state_dict())
-            print('Target network updated') if self.DEBUG_MODE else None
+            print("Target network updated") if self.DEBUG_MODE else None
 
         self.learn_step_counter += 1
-        print(f'Step: {self.learn_step_counter}, Loss: {loss.item():.6f}') if self.DEBUG_MODE else None
+        print(
+            f"Step: {self.learn_step_counter}, Loss: {loss.item():.6f}"
+        ) if self.DEBUG_MODE else None
 
-    
     def plot_rewards(self, reward_list):
         plt.figure()
-        plt.plot(reward_list, label='Total Reward')
-        plt.xlabel('Episodes')
-        plt.ylabel('Total Reward')
-        plt.title('Total Reward per Episode')
+        plt.plot(reward_list, label="Total Reward")
+        plt.xlabel("Episodes")
+        plt.ylabel("Total Reward")
+        plt.title("Total Reward per Episode")
         plt.legend()
         plt.show()
 
@@ -151,6 +158,7 @@ class DQNAgent():
         else:
             print("Model file not found.")
 
+
 def main():
     dqn = DQNAgent()
     episodes = 100
@@ -160,7 +168,7 @@ def main():
     reward_list = []
 
     for i in tqdm(range(episodes), desc="Processing episodes"):
-        print(f'\nStarting episode {i}') if debug else None
+        print(f"\nStarting episode {i}") if debug else None
         state, _ = env.reset()
         ep_reward = 0
 
@@ -168,16 +176,18 @@ def main():
         while True:
             # env.render()
             action = dqn.choose_action(state)
-            print(f"Just chose action step {debugepisodestep}") if debug else None #changed if statement for main
+            print(
+                f"Just chose action step {debugepisodestep}"
+            ) if debug else None  # changed if statement for main
 
             next_state, reward, done, _ = env.step(action)
             ep_reward += reward
             dqn.store_transition(state, action, reward, next_state)
-            
+
             if done:
                 print(f"episode: {i} , the episode reward is {reward:.3f}")
                 break
-            
+
             debugepisodestep += 1
             state = next_state
 
@@ -209,5 +219,6 @@ def main():
 
     env.close()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
