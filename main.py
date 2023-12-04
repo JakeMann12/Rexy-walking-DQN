@@ -49,7 +49,7 @@ def main():
         observation, reward, done, info = env.step(action)
 
         rewards.append(reward)
-        xy_positions.append((observation[0], observation[1]))
+        xy_positions.append((observation[0].item(), observation[1].item()))
 
         if step == 1:  # Print observation for comparison
             #If cos(Z) is close to 1, the object is mostly aligned with the X-axis. If sin(Z) is close to 1, the object is mostly aligned with the Y-axis.

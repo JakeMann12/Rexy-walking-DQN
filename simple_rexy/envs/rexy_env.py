@@ -1,4 +1,4 @@
-import os
+import torch
 import gym
 from gym import error, spaces, utils
 from gym.utils import seeding
@@ -23,6 +23,7 @@ class SimpleRexyEnv(gym.Env):
     TIPPING_PENALTY = -75
     SURVIVAL_REWARD = 1  # Small positive reward for staying alive
     TIME_PENALTY_SCALE = 0.01  # Adjust as needed
+    MAX_STEPS_EPISODE = 800 #how long it can go
     
     def __init__(self, client = p.connect(p.GUI), self_collision_enabled = True):
         self._self_collision_enabled = self_collision_enabled
@@ -53,6 +54,10 @@ class SimpleRexyEnv(gym.Env):
         self.first_obs = self.rexy.get_observation()
 
     def step(self, action):
+        """
+        Takes 6-D array input, calls reward function and returns
+        values for observation, reward, and 
+        """
         print("=====  STEPTIME  =====\n") if self.DEBUG_MODE else None
         p.configureDebugVisualizer(p.COV_ENABLE_SINGLE_STEP_RENDERING)
 
@@ -65,7 +70,7 @@ class SimpleRexyEnv(gym.Env):
         rexy_ob = self.rexy.get_observation()
 
         ob = np.array(rexy_ob, dtype=np.float32)
-        reward = self.compute_reward(rexy_ob)
+        reward = self.compute_reward(rexy_ob) 
         done = self.done
         
         self.current_step += 1  # Increment the current step at each call to step()
@@ -113,6 +118,10 @@ class SimpleRexyEnv(gym.Env):
         # Time-dependent penalty for taking too long
         time_penalty = -self.TIME_PENALTY_SCALE * self.current_step
         reward += time_penalty
+
+        # Timeout
+        if self.current_step >= self.MAX_STEPS_EPISODE:
+            self.done = True
 
         # Update prev_dist_to_goal for the next step
         self.prev_dist_to_goal = dist_to_goal
