@@ -31,7 +31,7 @@ class Net(nn.Module):
 
 # Define the DQN agent
 class DQNAgent:
-    def __init__(self, env, render=False, debug=True, BATCH_SIZE = 128, LR = 0.01, GAMMA = 0.90, 
+    def __init__(self, env, BATCH_SIZE = 128, LR = 0.01, GAMMA = 0.90, 
                  EPSILON = 0.9, EPSILON_DECAY = 0.995, EPSILON_MIN = 0.01, MEMORY_CAPACITY = 2000, 
                  Q_NETWORK_ITERATION = 100):
         # ESTABLISH REXY ENV
@@ -63,9 +63,6 @@ class DQNAgent:
 
         # Rewards!
         self.episode_rewards = []
-
-        # Debug
-        self.DEBUG_MODE = debug
 
     def select_action(self, state):
         if np.random.rand() <= self.epsilon:
@@ -137,7 +134,7 @@ class DQNAgent:
                 if done:
                     break
 
-            if episode % 5 == 0:
+            if episode % (num_episodes/10) == 0:
                 print(f"Episode {episode}, Total Reward: {total_reward}")
 
             # Append episode reward to the list
@@ -147,7 +144,7 @@ class DQNAgent:
         self.plot_rewards(self.episode_rewards)
 
         if save == True:
-            print("boutta save the model") if self.DEBUG_MODE else None
+            print("boutta save the model")
             self.save_model()
 
     def plot_rewards(self, reward_list):

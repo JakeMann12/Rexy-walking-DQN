@@ -9,7 +9,7 @@
     <link name="base_link">
         <visual>
             <geometry>
-                <cylinder radius="0.5" length="1"/>
+                <cylinder radius="0.25" length=".25"/>
                 <origin rpy="0 0 0" xyz="0 0 0.5"/>
             </geometry>
             <material name="green"/>

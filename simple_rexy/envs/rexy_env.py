@@ -18,24 +18,28 @@ class SimpleRexyEnv(gym.Env):
     #Reward Function Tuning Vals
     FORWARD_YAW_THRESHOLD = pi / 3
     ALIGNMENT_PENALTY = -10
-    PITCH_DEGREES = 45
-    MAX_PITCH_THRESHOLD = np.radians(PITCH_DEGREES)
-    TIPPING_PENALTY = -75
-    SURVIVAL_REWARD = 1  # Small positive reward for staying alive
+    PITCH_DEGREES = 30; MAX_PITCH_THRESHOLD = np.radians(PITCH_DEGREES)
+    TIPPING_PENALTY = -100
+    HEIGHT_REWARD = 45
+    HEIGHT_PENALTY = -75
+    SURVIVAL_REWARD = 40  # Small positive reward for staying alive
     TIME_PENALTY_SCALE = 0.01  # Adjust as needed
-    MAX_STEPS_EPISODE = 800 #how long it can go
+    MAX_STEPS_EPISODE = 500 #how long it can go
+    TIMEOUT_PENALTY = -30
+    X_DIST_REWARD_COEF = 400
+    REACH_GOAL_REWARD = 200
     
-    def __init__(self, client = p.connect(p.DIRECT), self_collision_enabled = True): # NOTE : GUI OR DIRECT
+    def __init__(self, client = p.connect(p.GUI), self_collision_enabled = True): # NOTE : GUI OR DIRECT
         self._self_collision_enabled = self_collision_enabled
         self.servoindices = [2, 4, 6, 10, 12, 14] #hardcoded
 
         self.action_space = gym.spaces.box.Box(
-            low = np.float32(-.4*pi*np.ones_like(self.servoindices)), # < -.4 * 180 degrees for all - prob overkill still
-            high = np.float32(.4*pi*np.ones_like(self.servoindices)))
+            low = np.float32(-.25*pi*np.ones_like(self.servoindices)), # < -.4 * 180 degrees for all - prob overkill still
+            high = np.float32(.25*pi*np.ones_like(self.servoindices)))
         self.observation_space = gym.spaces.box.Box(
             # x, y, z positions, roll, pitch, yaw angles, x and y velocity components. NOTE: REMOVED x and y position of goal
-            low =np.float32(np.array([-10, -5,  0, -pi, -pi/2, -pi, -1, -1])),
-            high=np.float32(np.array([ 10,  5,  1,  pi,  pi/2,  pi,  5,  5]))) 
+            low =np.float32(np.array([-5, -5,  0, -pi, -pi/2, -pi, -1, -1])),
+            high=np.float32(np.array([ 5,  5,  .4,  pi,  pi/2,  pi,  5,  5]))) 
         
         self.np_random, _ = gym.utils.seeding.np_random()
         self.client = client 
@@ -84,8 +88,11 @@ class SimpleRexyEnv(gym.Env):
             - penalty if not
         3. Punishes for tilting downwards too far (pitch)
             - breaks if outside of range (fell over)
-        4. Survival reward for staying alive
-        5. Time-dependent penalty for taking too long
+        4. Being on the ground
+            - punishes if goes higher than .35 m (starts at .25 m)
+        5. Survival reward for staying alive
+        6. Time-dependent penalty for taking too long
+        7. Exit condition for reaching the goal
         """
         
         print("------COMPUTEREWARD TIME--------\n") if self.DEBUG_MODE else None
@@ -94,7 +101,7 @@ class SimpleRexyEnv(gym.Env):
         dist_to_goal = math.sqrt(((rexy_ob[0] - self.goal[0]) ** 2 +
                                 (rexy_ob[1] - self.goal[1]) ** 2))
         
-        reward = max(self.prev_dist_to_goal - dist_to_goal, 0) * 100
+        reward = max(self.prev_dist_to_goal - dist_to_goal, 0) * self.X_DIST_REWARD_COEF
 
         # Penalize if the robot is not facing forwards (based on yaw angle)
         yaw_angle = rexy_ob[5]
@@ -103,7 +110,7 @@ class SimpleRexyEnv(gym.Env):
             reward += self.ALIGNMENT_PENALTY
             print("Alignment penalty applied") if self.DEBUG_MODE else None
 
-        # Penalize if the robot is not upright (based on pitch angle)
+        # Punishes for tilting downwards too far (pitch)
         pitch_angle = rexy_ob[4]
         pitch_difference = abs(pitch_angle - self.first_obs[4])
 
@@ -111,6 +118,14 @@ class SimpleRexyEnv(gym.Env):
             reward += self.TIPPING_PENALTY
             print("Tipping penalty applied") if self.DEBUG_MODE else None
             self.done = True  # End the episode if tipping occurs
+
+        # Rewards if Z height within .225 - .325 m
+        z_height = rexy_ob[2]
+        if .22 < z_height <= .325:
+            reward += self.HEIGHT_REWARD
+        else:
+            reward += self.HEIGHT_PENALTY
+            self.done = True
 
         # Survival reward for staying alive
         reward += self.SURVIVAL_REWARD
@@ -121,10 +136,17 @@ class SimpleRexyEnv(gym.Env):
 
         # Timeout
         if self.current_step >= self.MAX_STEPS_EPISODE:
+            reward += self.TIMEOUT_PENALTY
             self.done = True
 
         # Update prev_dist_to_goal for the next step
         self.prev_dist_to_goal = dist_to_goal
+
+        # Exit condition for reaching the goal
+        # Done by reaching goal
+        if dist_to_goal < 1:
+            self.done = True
+            reward += self.REACH_GOAL_REWARD
 
         print(f"DONE COMPUTING REWARD: {reward:.3f}") if self.DEBUG_MODE else None
         return reward
@@ -145,7 +167,7 @@ class SimpleRexyEnv(gym.Env):
         self.rexy = Rexy(self.client)
 
         # Set the goal to a target
-        x = 3  # Hardcoded value for now
+        x = 1.5  # Hardcoded value for now
         y = 0
         self.goal = (x, y)
         self.done = False
@@ -172,7 +194,6 @@ class SimpleRexyEnv(gym.Env):
         return observation, info
     
     def render(self): #, mode='human'): #NOTE: didn't change anything but car-> rexy
-        #p.connect(p.GUI)
         if self.rendered_img is None:
             self.rendered_img = plt.imshow(np.zeros((100, 100, 4)))
 
