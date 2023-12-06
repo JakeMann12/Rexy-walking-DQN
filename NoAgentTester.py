@@ -7,7 +7,7 @@ import time
 import pybullet as p
 import matplotlib.pyplot as plt
 import numpy as np
-
+from Agent import DQNAgent
 # zswang666 and electricelephant
 
 
@@ -60,44 +60,44 @@ def plot_results(rewards, xy_positions):
     plt.show()
 
 
-def main():
-    env = gym.make("rexy-v0")
-    observation = env.reset()
+def run_trained_agent(model_path, num_episodes = 1):
+    # Initialize DQNAgent
+    agent = DQNAgent('rexy-v0', BATCH_SIZE=128, LR=0.01, GAMMA=0.90,
+                     EPSILON=0.0,  # Set epsilon to 0 for a deterministic policy
+                     EPSILON_DECAY=1.0,  # No epsilon decay during the run
+                     EPSILON_MIN=0.0,  # Minimum epsilon during the run
+                     MEMORY_CAPACITY=2000,
+                     Q_NETWORK_ITERATION=100)
 
-    # Lists to store data for plotting
-    rewards = []
+    # Load the trained model
+    agent.load_model(model_path)
+
+    # Run the trained agent without training
     xy_positions = []
+    rewards = []
 
-    steps = 500
-    for step in range(steps):
-        action = env.action_space.sample()
-        # action = np.zeros(6) #for testing
-        observation, reward, done, info = env.step(action)
+    for episode in range(num_episodes):
+        state, _ = agent.env.reset()
+        total_reward = 0
 
-        rewards.append(reward)
-        xy_positions.append((observation[0].item(), observation[1].item()))
+        while True:
+            action = agent.select_action(state)
+            next_state, reward, done, _ = agent.env.step(action)
 
-        if step == 1:  # Print observation for comparison
-            # If cos(Z) is close to 1, the object is mostly aligned with the X-axis. If sin(Z) is close to 1, the object is mostly aligned with the Y-axis.
-            print(
-                f"Rexy Observation (X Y Z R P Y and X Y velocity):\n{env.rexy.get_observation()}\n"
-            )
+            total_reward += reward
+            state = next_state
 
-        if not env.observation_space.contains(observation):
-            print("Invalid observation:", observation)
+            xy_positions.append((next_state[0].item(), next_state[1].item()))
+            rewards.append(total_reward)
 
-        if done:
-            print(
-                f"Episode finished after {step + 1} timesteps\nFinal Observation:\n{observation}"
-            )
-            plot_results(rewards, xy_positions)
-            break
+            if done:
+                #pass
+                break
 
-        if step == steps - 1:
-            plot_results(rewards, xy_positions)
-
-    env.close()
-
+    # Plot the results
+    plot_results(rewards, xy_positions)
 
 if __name__ == "__main__":
-    main()
+    run_trained_agent(r"Epochs\dqn_model_epoch_{epoch}.pth")
+
+    

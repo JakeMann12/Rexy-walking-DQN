@@ -44,7 +44,7 @@ class DQNAgent:
         else:
             self.device = torch.device("cpu")
             print("GPU is not available. Using CPU.")
-
+        self.device = torch.device("cpu")
 
         # ESTABLISH REXY ENV
         self.env = gym.make(env).unwrapped
@@ -58,7 +58,7 @@ class DQNAgent:
         self.loss_fn = nn.MSELoss()
 
         # Experience replay
-        self.memory = deque(maxlen=MEMORY_CAPACITY)
+        self.memory = deque(maxlen=MEMORY_CAPACITY)#.to(self.device)
 
         # Batch, Gamma
         self.batch_size = BATCH_SIZE
@@ -77,6 +77,9 @@ class DQNAgent:
         self.episode_rewards = []
 
     def select_action(self, state):
+        """
+        Chooses action based on epsilon-greedy method
+        """
         if np.random.rand() <= self.epsilon:
             action = self.env.action_space.sample()  # RANDOM ACTION
         else:
@@ -99,7 +102,6 @@ class DQNAgent:
 
         # Convert states to a tensor
         states = torch.FloatTensor(np.array(states)).to(self.device)
-
         actions = torch.FloatTensor(np.array(actions)).to(self.device)
         rewards = torch.FloatTensor(rewards).to(self.device)
         next_states = torch.FloatTensor(np.array(next_states)).to(self.device)
@@ -108,7 +110,6 @@ class DQNAgent:
         # Q-learning update
         q_values = self.q_network(states)
         target_q_values = self.target_network(next_states).detach()
-
         target = rewards + self.gamma * (1 - dones) * target_q_values.max(dim=1)[0]
         target = target.unsqueeze(1).expand_as(q_values)
         loss = self.loss_fn(q_values, target)

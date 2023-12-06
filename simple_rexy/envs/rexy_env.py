@@ -28,6 +28,7 @@ class SimpleRexyEnv(gym.Env):
     MAX_STEPS_EPISODE = 600  # Extended maximum episode steps
     TIMEOUT_PENALTY = -40  # Increased penalty for reaching the timeout
     X_DIST_REWARD_COEF = 500  # Increased coefficient for distance reward
+    X_VEL_REWARD_COEFF = 1000
     REACH_GOAL_REWARD = 250  # Increased reward for reaching the goal
     
     def __init__(self, client = p.connect(p.DIRECT), self_collision_enabled = True): # NOTE : GUI OR DIRECT
@@ -85,6 +86,7 @@ class SimpleRexyEnv(gym.Env):
         """
         Takes 8-part rexy obs (x y z r p y v_x v_y) and rewards for:
         1. Closeness to goal
+        2. X-velocity
         2. Being pointed towards the goal (yaw)
             - penalty if not
         3. Punishes for tilting downwards too far (pitch)
@@ -103,6 +105,9 @@ class SimpleRexyEnv(gym.Env):
                                 (rexy_ob[1] - self.goal[1]) ** 2))
         
         reward = max(self.prev_dist_to_goal - dist_to_goal, 0) * self.X_DIST_REWARD_COEF
+
+        # 2. X-velocity reward
+        reward += rexy_ob[-2] * self.X_VEL_REWARD_COEFF
 
         # Penalize if the robot is not facing forwards (based on yaw angle)
         yaw_angle = rexy_ob[5] - self.first_obs [5]
@@ -140,14 +145,15 @@ class SimpleRexyEnv(gym.Env):
             reward += self.TIMEOUT_PENALTY
             self.done = True
 
-        # Update prev_dist_to_goal for the next step
-        self.prev_dist_to_goal = dist_to_goal
-
         # Exit condition for reaching the goal
         # Done by reaching goal
         if dist_to_goal < 1:
-            self.done = True
             reward += self.REACH_GOAL_REWARD
+            print("GOT TO THE GOAL")
+            self.done = True
+
+        # Update prev_dist_to_goal for the next step
+        self.prev_dist_to_goal = dist_to_goal
 
         print(f"DONE COMPUTING REWARD: {reward:.3f}") if self.DEBUG_MODE else None
         return reward
