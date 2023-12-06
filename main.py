@@ -1,6 +1,8 @@
 from simple_rexy.envs.rexy_env import SimpleRexyEnv
-from SimpleAgent import DQNAgent
+from Agent import DQNAgent
 import pybullet as p
+from tqdm import tqdm
+
 
 def train_rexy(num_episodes, save=True, epoch_steps=1000, total_epochs=200):
     # Initialize DQNAgent
@@ -8,12 +10,12 @@ def train_rexy(num_episodes, save=True, epoch_steps=1000, total_epochs=200):
                      EPSILON=0.9, EPSILON_DECAY=0.995, EPSILON_MIN=0.01, MEMORY_CAPACITY=2000,
                      Q_NETWORK_ITERATION=100)
 
-    agent.load_model("Epochs/dqn_model_epoch_{epoch}.pth")
+    agent.load_model(r"Epochs/dqn_model_epoch_{epoch}.pth")
 
     # Train the agent
     total_steps = 0
     for epoch in range(total_epochs):
-        for episode in range(num_episodes):
+        for episode in tqdm(range(num_episodes)):
             state, _ = agent.env.reset()
             total_reward = 0
 
@@ -46,5 +48,5 @@ def train_rexy(num_episodes, save=True, epoch_steps=1000, total_epochs=200):
     agent.plot_rewards(agent.episode_rewards)
 
 if __name__ == "__main__":
-    train_rexy(num_episodes=10, save=True, epoch_steps=100, total_epochs=5)
+    train_rexy(num_episodes=1000, save=True, epoch_steps=250, total_epochs=100)
     # run_rendered(500)  # steps
