@@ -16,20 +16,21 @@ class SimpleRexyEnv(gym.Env):
     metadata = {'render_modes': ['human', 'rgb_array']}  
 
     #Reward Function Tuning Vals
-    FORWARD_YAW_THRESHOLD = pi / 3
-    ALIGNMENT_PENALTY = -10
-    PITCH_DEGREES = 30; MAX_PITCH_THRESHOLD = np.radians(PITCH_DEGREES)
-    TIPPING_PENALTY = -100
-    HEIGHT_REWARD = 45
-    HEIGHT_PENALTY = -75
-    SURVIVAL_REWARD = 40  # Small positive reward for staying alive
-    TIME_PENALTY_SCALE = 0.01  # Adjust as needed
-    MAX_STEPS_EPISODE = 500 #how long it can go
-    TIMEOUT_PENALTY = -30
-    X_DIST_REWARD_COEF = 400
-    REACH_GOAL_REWARD = 200
+    FORWARD_YAW_THRESHOLD = 2 * pi / 4  # Adjusted threshold for alignment
+    ALIGNMENT_PENALTY = -30  # Increased penalty for misalignment
+    PITCH_DEGREES = 25  # Reduced maximum pitch threshold
+    MAX_PITCH_THRESHOLD = np.radians(PITCH_DEGREES)
+    TIPPING_PENALTY = -120  # Increased penalty for tipping
+    HEIGHT_REWARD = 60  # Increased reward for being at the correct height
+    HEIGHT_PENALTY = -400  # Increased penalty for being outside the height range
+    SURVIVAL_REWARD = 120  # Increased survival reward
+    TIME_PENALTY_SCALE = 0.015  # Adjusted time penalty scale
+    MAX_STEPS_EPISODE = 600  # Extended maximum episode steps
+    TIMEOUT_PENALTY = -40  # Increased penalty for reaching the timeout
+    X_DIST_REWARD_COEF = 500  # Increased coefficient for distance reward
+    REACH_GOAL_REWARD = 250  # Increased reward for reaching the goal
     
-    def __init__(self, client = p.connect(p.GUI), self_collision_enabled = True): # NOTE : GUI OR DIRECT
+    def __init__(self, client = p.connect(p.DIRECT), self_collision_enabled = True): # NOTE : GUI OR DIRECT
         self._self_collision_enabled = self_collision_enabled
         self.servoindices = [2, 4, 6, 10, 12, 14] #hardcoded
 
@@ -104,7 +105,7 @@ class SimpleRexyEnv(gym.Env):
         reward = max(self.prev_dist_to_goal - dist_to_goal, 0) * self.X_DIST_REWARD_COEF
 
         # Penalize if the robot is not facing forwards (based on yaw angle)
-        yaw_angle = rexy_ob[5]
+        yaw_angle = rexy_ob[5] - self.first_obs [5]
 
         if abs(yaw_angle) > self.FORWARD_YAW_THRESHOLD:
             reward += self.ALIGNMENT_PENALTY
@@ -121,7 +122,7 @@ class SimpleRexyEnv(gym.Env):
 
         # Rewards if Z height within .225 - .325 m
         z_height = rexy_ob[2]
-        if .22 < z_height <= .325:
+        if .18 < z_height <= .325:
             reward += self.HEIGHT_REWARD
         else:
             reward += self.HEIGHT_PENALTY
