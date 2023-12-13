@@ -1,10 +1,6 @@
 import pybullet as p
 import numpy as np
 
-
-# %% NOTE: REQUIRES HEAVY EDITING
-
-
 class Rexy:
     def __init__(self, client):
         self.client = client
@@ -14,10 +10,11 @@ class Rexy:
             basePosition=[0, 0, 0.18],  # hardcoded
             physicsClientId=client,
             flags=p.URDF_USE_INERTIA_FROM_FILE,
-        )  # NOTE: added this in extra from hello_bullet
-        self.servo_joints = [2, 4, 6, 10, 12, 14,
-        ]  # steering joints, I believe, with reference to the other example
+        )  # NOTE: added flags in extra from hello_bullet
+        self.servo_joints = [2, 4, 6, 10, 12, 14
+        ]  
         self.max_force = 1.6671305  # NOTE: Pretty sure is Nm
+        
 
     def get_ids(self):
         return self.client, self.rexy

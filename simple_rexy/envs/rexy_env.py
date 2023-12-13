@@ -43,14 +43,19 @@ class SimpleRexyEnv(gym.Env):
             low =np.float32(np.array([-5, -5,  0, -pi, -pi/2, -pi, -1, -1])),
             high=np.float32(np.array([ 5,  5,  .4,  pi,  pi/2,  pi,  5,  5]))) 
         
-        self.np_random, _ = gym.utils.seeding.np_random()
         self.client = client 
+        self.rexy = Rexy(self.client)
+        Plane(self.client)
+        self.goal = (1.5, 0) #hardcoded for now- moved up from reset
+        Goal(self.client, self.goal)
+        
+        # Save the initial state
+        self.initial_state = p.saveState(physicsClientId=self.client)
         # Reduce length of episodes for RL algorithms
         p.setTimeStep(1/30, self.client)
 
         self.DEBUG_MODE = False
-        self.rexy = None
-        self.goal = None
+
         self.done = False
         self.prev_dist_to_goal = None
         self.rendered_img = None
@@ -162,27 +167,9 @@ class SimpleRexyEnv(gym.Env):
         print("=== Resetting Environment ===") if self.DEBUG_MODE else None
         options, seed = options, seed #Worthless- avoids an error
 
-        # Reset the simulation and gravity
-        p.resetSimulation(self.client)
-        p.setGravity(0, 0, -9.81) #-9.81)  # m/s^2
-
-        # Reload the plane and rexy
-        print("Loading Plane...") if self.DEBUG_MODE else None
-        Plane(self.client)
-
-        print("Creating Rexy...") if self.DEBUG_MODE else None
-        self.rexy = Rexy(self.client)
-
-        # Set the goal to a target
-        x = 1.5  # Hardcoded value for now
-        y = 0
-        self.goal = (x, y)
-        self.done = False
-
-        # Visual element of the goal
-        print(f"Creating Goal at {self.goal}...") if self.DEBUG_MODE else None
-        Goal(self.client, self.goal)
-
+        print("Resetting Rexy Pos...") if self.DEBUG_MODE else None
+        p.restoreState(self.initial_state, physicsClientId=self.client)
+        
         # Get observation to return
         rexy_ob = self.rexy.get_observation()
 
@@ -191,14 +178,13 @@ class SimpleRexyEnv(gym.Env):
 
         print(f"Prev dist to goal: {self.prev_dist_to_goal:.3f}") if self.DEBUG_MODE else None
 
-        observation = np.array(rexy_ob, dtype=np.float32)
         info = {}
 
-        print(f"Observation (get_obs): {observation}") if self.DEBUG_MODE else None
+        print(f"Observation (get_obs): {rexy_ob}") if self.DEBUG_MODE else None
         print(f"Info: {info}") if self.DEBUG_MODE else None
         print("=== Reset Complete ===") if self.DEBUG_MODE else None
 
-        return observation, info
+        return rexy_ob, info
     
     def render(self): #, mode='human'): #NOTE: didn't change anything but car-> rexy
         if self.rendered_img is None:

@@ -1,53 +1,84 @@
-from simple_rexy.envs.rexy_env import SimpleRexyEnv
 from Agent import DQNAgent
-import pybullet as p
-from tqdm import tqdm
+import matplotlib.pyplot as plt
+import cProfile
+import shutil
+import os
+import datetime
 
-def train_rexy(model, num_episodes = 300, save=True, epoch_steps=1000, total_epochs=200):
+def create_and_move_prof_file():
+    # Create a folder for profiler outputs if it doesn't exist
+    profiler_output_folder = "ProfilerOutputs"
+    if not os.path.exists(profiler_output_folder):
+        os.makedirs(profiler_output_folder)
+
+    # Get the current date and time in the desired format (e.g., 'Dec13-14:58')
+    current_time = datetime.datetime.now().strftime('%b%d-%H%M')
+    
+    # Move existing .prof files to ProfilerOutputs folder
+    for filename in os.listdir():
+        if filename.endswith(".prof"):
+            shutil.move(filename, os.path.join(profiler_output_folder, filename))
+
+    # Create a new .prof file with the current date/time
+    new_prof_filename = f"{current_time}.prof"
+    new_prof_filepath = os.path.join(new_prof_filename)
+
+    # Return the path to the newly created .prof file
+    return new_prof_filepath
+
+def train_rexy(model=None, num_epochs=200, num_episodes=300, save=True, profile=False, plot=False):
+    if profile:
+        profiler = cProfile.Profile()
+        profiler.enable()
+
+    epoch_rewards = []  # List to store rewards for each epoch
+
     # Initialize DQNAgent
     agent = DQNAgent('rexy-v0', BATCH_SIZE=512, LR=0.04, GAMMA=0.90,
                      EPSILON=0.9, EPSILON_DECAY=0.995, EPSILON_MIN=0.01, MEMORY_CAPACITY=2000,
                      Q_NETWORK_ITERATION=100)
-
     agent.load_model(model)
 
     # Train the agent
-    total_steps = 0
-    for epoch in range(total_epochs+1):
-        for episode in tqdm(range(num_episodes+1)):
-            state, _ = agent.env.reset()
-            total_reward = 0
-            steps_in_epoch = 0
+    for epoch in range(num_epochs):
+        # Call the train method of the agent, which now returns episode_rewards
+        episode_rewards = agent.train(num_episodes, save=save)
 
-            while steps_in_epoch < epoch_steps:
-                action = agent.select_action(state)
-                next_state, reward, done, _ = agent.env.step(action)
-                agent.remember(state, action, reward, next_state, done)
+        # Append the episode_rewards to epoch_rewards
+        epoch_rewards.append(episode_rewards)
 
-                total_reward += reward
-                state = next_state
+        # Add code to evaluate performance, adjust hyperparameters,
+        # save the model, or perform any other epoch-level operations in the future.
+        print(f"Epoch {epoch + 1} Completed")
 
-                steps_in_epoch += 1
-                total_steps += 1
+    if profile:
+        profiler.disable()
+        new_prof_filepath = create_and_move_prof_file()
+        profiler.dump_stats(new_prof_filepath)
 
-                if done:
-                    break
+    if plot:
+        plot_rewards(epoch_rewards)
 
-            agent.replay(agent.batch_size)
+def plot_rewards(epoch_rewards):
+    # Create one big figure with subplots for each epoch
+    num_epochs = len(epoch_rewards)
+    fig, axs = plt.subplots(1, num_epochs, figsize=(num_epochs * 4, 3))
+    fig.suptitle("Rewards per Epoch")
 
-        #if epoch % (total_epochs // 10) == 0:
-        print(f"Epoch {epoch}, Total Reward: {total_reward:.2f}")
+    for i, episode_rewards in enumerate(epoch_rewards):
+        if episode_rewards is not None and len(episode_rewards) > 0:
+            axs[i].plot(episode_rewards)
+            axs[i].set_title(f"Epoch {i + 1}")
+            axs[i].set_xlabel("Episode")
+            axs[i].set_ylabel("Reward")
+        else:
+            axs[i].set_title(f"Epoch {i + 1} (No Data)")
+            axs[i].axis('off')
 
-        # Decay epsilon based on total steps
-        agent.epsilon = max(agent.epsilon_min, agent.epsilon * agent.epsilon_decay)
-
-        # Save model at the end of each epoch
-        if save:
-            agent.save_model(model)
-
-    # After training, plot and save the static results
-    agent.plot_rewards(agent.episode_rewards)
+    # Save the big figure
+    plt.tight_layout()
+    #plt.savefig("rewards_per_epoch.png")
+    plt.show()
 
 if __name__ == "__main__":
-    train_rexy(r"Epochs/dqn_model_epoch_{epoch}.pth", num_episodes=1000, save=True, epoch_steps=1000, total_epochs=2)
-    # run_rendered(500)  # steps
+    train_rexy(model=r'Epochs/3layer128node', num_epochs=2, num_episodes=300, save=False, plot = True, profile=True)

@@ -73,9 +73,6 @@ class DQNAgent:
         # Counter for Q-network updates
         self.update_counter = 0
 
-        # Rewards!
-        self.episode_rewards = []
-
     def select_action(self, state):
         """
         Chooses action based on epsilon-greedy method
@@ -123,10 +120,8 @@ class DQNAgent:
         if self.update_counter % self.q_network_iteration == 0:
             self.target_network.load_state_dict(self.q_network.state_dict())
 
-        # Decay epsilon
-        self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
-
-    def train(self, num_episodes, save=True):
+    def train(self, num_episodes, plot = False, save=True):
+        episode_rewards = []
         for episode in tqdm(range(num_episodes)):
             state, _ = self.env.reset()
             total_reward = 0
@@ -135,35 +130,33 @@ class DQNAgent:
                 action = self.select_action(state)
                 next_state, reward, done, _ = self.env.step(action)
                 self.remember(state, action, reward, next_state, done)
-                self.replay(self.batch_size)
-
                 total_reward += reward
                 state = next_state
 
+                # NOTE: moved Decay epsilon into each step instead of in the replay funct.
+                self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
+                
                 if done:
                     break
 
-            if episode % (num_episodes/10) == 0:
-                print(f"Episode {episode}, Total Reward: {total_reward:.2f}")
+            #NOTE: put this back in every episode if it takes too long time-wise to learn.
+            self.replay(self.batch_size)
 
             # Append episode reward to the list
-            self.episode_rewards.append(total_reward)
+            episode_rewards.append(total_reward)
+
+            if episode == num_episodes:
+                print(f"After {episode} episodes, Total Reward: {total_reward:.2f}")
 
         # After training, plot and save the static results
-        self.plot_rewards(self.episode_rewards)
+        if plot:
+            self.plot_rewards(episode_rewards)
 
         if save:
             print("boutta save the model")
             self.save_model()
 
-    def plot_rewards(self, reward_list):
-        plt.figure()
-        plt.plot(reward_list, label="Total Reward")
-        plt.xlabel("Episodes")
-        plt.ylabel("Total Reward")
-        plt.title("Total Reward per Episode")
-        plt.legend()
-        plt.show()
+        return episode_rewards
 
     def save_model(self, model_path="dqn_model.pth"):
         torch.save(self.q_network.state_dict(), model_path)
