@@ -31,7 +31,7 @@ class SimpleRexyEnv(gym.Env):
     X_VEL_REWARD_COEFF = 500 # high only bc m/s are the units
     REACH_GOAL_REWARD = 250  # Increased reward for reaching the goal
     
-    def __init__(self, client = p.connect(p.DIRECT), self_collision_enabled = True): # NOTE : GUI OR DIRECT
+    def __init__(self, client = p.connect(p.GUI), self_collision_enabled = True): # NOTE : GUI OR DIRECT
         self._self_collision_enabled = self_collision_enabled
         self.servoindices = [2, 4, 6, 10, 12, 14] #hardcoded
 

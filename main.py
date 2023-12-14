@@ -19,5 +19,5 @@ def train_rexy(model=None, num_epochs=200, num_episodes=300, save=True, profile=
 
 if __name__ == "__main__":
     train_rexy(model='dqn_model.pth', 
-               num_epochs=15, num_episodes=100, 
-               save=False, plot = True, profile = False)
+               num_epochs=50 , num_episodes=200, 
+               save=True, plot = True, profile = False)

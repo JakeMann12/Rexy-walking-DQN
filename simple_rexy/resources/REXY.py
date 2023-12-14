@@ -3,6 +3,7 @@ import numpy as np
 
 class Rexy:
     def __init__(self, client):
+        p.setGravity(0,0,-9.81)
         self.client = client
         f_name = r"simple_rexy\resources\RexyURDF\jake.urdf"
         self.rexy = p.loadURDF(
@@ -34,6 +35,7 @@ class Rexy:
                 controlMode=p.POSITION_CONTROL,  # Use POSITION_CONTROL for position control
                 targetPosition=target_position,
                 force=self.max_force,
+                maxVelocity = 2*np.pi/1.14 #NOTE: somehwat assuming rad / sec
             )
 
     def get_observation(self):
