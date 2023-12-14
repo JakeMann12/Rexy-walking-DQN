@@ -27,8 +27,8 @@ class SimpleRexyEnv(gym.Env):
     TIME_PENALTY_SCALE = 0.015  # Adjusted time penalty scale
     MAX_STEPS_EPISODE = 600  # Extended maximum episode steps
     TIMEOUT_PENALTY = -40  # Increased penalty for reaching the timeout
-    X_DIST_REWARD_COEF = 500  # Increased coefficient for distance reward
-    X_VEL_REWARD_COEFF = 1000
+    X_DIST_REWARD_COEF = 700  # Increased coefficient for distance reward
+    X_VEL_REWARD_COEFF = 500 # high only bc m/s are the units
     REACH_GOAL_REWARD = 250  # Increased reward for reaching the goal
     
     def __init__(self, client = p.connect(p.DIRECT), self_collision_enabled = True): # NOTE : GUI OR DIRECT

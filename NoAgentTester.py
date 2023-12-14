@@ -91,13 +91,13 @@ def run_trained_agent(model_path, num_episodes = 1):
             rewards.append(total_reward)
 
             if done:
-                #pass
-                break
+                pass
+                #break
 
     # Plot the results
     plot_results(rewards, xy_positions)
 
 if __name__ == "__main__":
-    run_trained_agent(r"Epochs\dqn_model_epoch_{epoch}.pth")
+    run_trained_agent(r"dqn_model.pth")
 
     

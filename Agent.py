@@ -111,6 +111,9 @@ class DQNAgent:
         target = target.unsqueeze(1).expand_as(q_values)
         loss = self.loss_fn(q_values, target)
 
+        #decay epsilon- back in the replay
+        self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
+
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
@@ -120,7 +123,7 @@ class DQNAgent:
         if self.update_counter % self.q_network_iteration == 0:
             self.target_network.load_state_dict(self.q_network.state_dict())
 
-    def train(self, num_episodes, plot = False, save=True):
+    def train(self, num_episodes):
         episode_rewards = []
         for episode in tqdm(range(num_episodes)):
             state, _ = self.env.reset()
@@ -134,7 +137,6 @@ class DQNAgent:
                 state = next_state
 
                 # NOTE: moved Decay epsilon into each step instead of in the replay funct.
-                self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
                 
                 if done:
                     break
@@ -148,21 +150,15 @@ class DQNAgent:
             if episode == num_episodes:
                 print(f"After {episode} episodes, Total Reward: {total_reward:.2f}")
 
-        # After training, plot and save the static results
-        if plot:
-            self.plot_rewards(episode_rewards)
-
-        if save:
-            print("boutta save the model")
-            self.save_model()
-
         return episode_rewards
 
     def save_model(self, model_path="dqn_model.pth"):
+        model_path = os.path.join('.pth Files', model_path)
         torch.save(self.q_network.state_dict(), model_path)
         print(f"model saved! to {model_path}")
 
     def load_model(self, model_path="dqn_model.pth"):
+        model_path = os.path.join('.pth Files', model_path)
         if os.path.exists(model_path):
             self.q_network.load_state_dict(torch.load(model_path, map_location=self.device))
             self.target_network.load_state_dict(
