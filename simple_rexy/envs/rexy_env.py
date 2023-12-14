@@ -132,7 +132,7 @@ class SimpleRexyEnv(gym.Env):
 
         # Rewards if Z height within .225 - .325 m
         z_height = rexy_ob[2]
-        if .18 < z_height <= .325:
+        if .145 < z_height <= .325:
             reward += self.HEIGHT_REWARD
         else:
             reward += self.HEIGHT_PENALTY

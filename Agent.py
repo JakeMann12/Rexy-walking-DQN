@@ -1,3 +1,4 @@
+from simple_rexy.envs.rexy_env import SimpleRexyEnv
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -9,7 +10,10 @@ import random
 import gym
 import copy
 from tqdm import tqdm
-from simple_rexy.envs.rexy_env import SimpleRexyEnv
+import cProfile
+import shutil
+import os
+import datetime
 
 # Define the neural network for DQN
 class Net(nn.Module):
@@ -123,34 +127,52 @@ class DQNAgent:
         if self.update_counter % self.q_network_iteration == 0:
             self.target_network.load_state_dict(self.q_network.state_dict())
 
-    def train(self, num_episodes):
-        episode_rewards = []
-        for episode in tqdm(range(num_episodes)):
-            state, _ = self.env.reset()
-            total_reward = 0
+    def train(self, model = None, num_epochs=200, num_episodes=300, save=True, profile=False, plot=False):
+        if profile:
+            profiler = cProfile.Profile()
+            profiler.enable()
 
-            while True:
-                action = self.select_action(state)
-                next_state, reward, done, _ = self.env.step(action)
-                self.remember(state, action, reward, next_state, done)
-                total_reward += reward
-                state = next_state
+        epoch_rewards = []  # List to store rewards for each epoch
+        for epoch in range(num_epochs):
 
-                # NOTE: moved Decay epsilon into each step instead of in the replay funct.
-                
-                if done:
-                    break
+            episode_rewards = []
+            for episode in tqdm(range(num_episodes)):
+                state, _ = self.env.reset()
+                total_reward = 0
 
-            #NOTE: put this back in every episode if it takes too long time-wise to learn.
-            self.replay(self.batch_size)
+                while True:
+                    action = self.select_action(state)
+                    next_state, reward, done, _ = self.env.step(action)
+                    self.remember(state, action, reward, next_state, done)
+                    total_reward += reward
+                    state = next_state
+                    # NOTE: moved Decay epsilon into each step instead of in the replay funct.
+                    
+                    if done:
+                        break
 
-            # Append episode reward to the list
-            episode_rewards.append(total_reward)
+                #NOTE: put this back in every episode if it takes too long time-wise to learn.
+                self.replay(self.batch_size)
 
-            if episode == num_episodes:
-                print(f"After {episode} episodes, Total Reward: {total_reward:.2f}")
+                # Append episode reward to the list
+                episode_rewards.append(total_reward)
 
-        return episode_rewards
+                if episode == num_episodes - 1:
+                    print(f"After {episode+1} episodes, Total Reward: {total_reward:.2f}")
+
+            epoch_rewards.append(episode_rewards)
+            print(f"Epoch {epoch + 1} Completed")
+
+            if save and epoch == num_epochs//3:
+                self.save_model(model)
+
+        if profile:
+            profiler.disable()
+            new_prof_filepath = self.create_and_move_prof_file()
+            profiler.dump_stats(new_prof_filepath)
+
+        if plot:
+            self.plot_rewards(epoch_rewards)
 
     def save_model(self, model_path="dqn_model.pth"):
         model_path = os.path.join('.pth Files', model_path)
@@ -167,3 +189,54 @@ class DQNAgent:
             print("Model loaded successfully.")
         else:
             print("Agent Model file not found.")
+
+    def plot_rewards(self, epoch_rewards, subplot_size=(4, 3)):
+        num_epochs = len(epoch_rewards)
+        num_epochs_to_display = min(9, num_epochs)
+        epochs_to_display = np.linspace(1, num_epochs, num_epochs_to_display, dtype=int)
+
+        rows = int(np.sqrt(num_epochs_to_display))
+        cols = int(np.ceil(num_epochs_to_display / rows))
+
+        fig, axs = plt.subplots(rows, cols, figsize=(cols * subplot_size[0], rows * subplot_size[1]))
+        fig.suptitle("Rewards per Epoch")
+
+        for i, epoch_index in enumerate(epochs_to_display):
+            row = i // cols
+            col = i % cols
+            episode_rewards = epoch_rewards[epoch_index - 1]  # Adjust for 0-based indexing
+
+            if episode_rewards is not None and len(episode_rewards) > 0:
+                axs[row, col].plot(episode_rewards)
+                axs[row, col].set_title(f"Epoch {epoch_index}")
+                axs[row, col].set_xlabel("Episode")
+                axs[row, col].set_ylabel("Reward")
+            else:
+                axs[row, col].set_title(f"Epoch {epoch_index} (No Data)")
+                axs[row, col].axis('off')
+
+        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+        
+        # Show the plot and block the code until the user closes the plot window
+        plt.show()
+
+    def create_and_move_prof_file(self):
+        # Create a folder for profiler outputs if it doesn't exist
+        profiler_output_folder = "ProfilerOutputs"
+        if not os.path.exists(profiler_output_folder):
+            os.makedirs(profiler_output_folder)
+
+        # Get the current date and time in the desired format (e.g., 'Dec13-14:58')
+        current_time = datetime.datetime.now().strftime('%b%d-%H%M')
+        
+        # Move existing .prof files to ProfilerOutputs folder
+        for filename in os.listdir():
+            if filename.endswith(".prof"):
+                shutil.move(filename, os.path.join(profiler_output_folder, filename))
+
+        # Create a new .prof file with the current date/time
+        new_prof_filename = f"{current_time}.prof"
+        new_prof_filepath = os.path.join(new_prof_filename)
+
+        # Return the path to the newly created .prof file
+        return new_prof_filepath
