@@ -10,7 +10,6 @@ import numpy as np
 from Agent import DQNAgent
 # zswang666 and electricelephant
 
-
 def plot_results(rewards, xy_positions):
     # Plot the reward function
     plt.figure(figsize=(14, 5))
@@ -56,9 +55,7 @@ def plot_results(rewards, xy_positions):
     plt.ylabel("Y Position")
     plt.title("Path of Rexy Over Time")
     plt.legend()
-
     plt.show()
-
 
 def run_trained_agent(model_path, num_episodes = 1):
     # Initialize DQNAgent
@@ -76,28 +73,25 @@ def run_trained_agent(model_path, num_episodes = 1):
     xy_positions = []
     rewards = []
 
-    for episode in range(num_episodes):
-        state, _ = agent.env.reset()
-        total_reward = 0
+    state, _ = agent.env.reset()
+    
+    while True:
+        action = agent.select_action(state)
+        next_state, reward, done, _ = agent.env.step(action)
 
-        while True:
-            action = agent.select_action(state)
-            next_state, reward, done, _ = agent.env.step(action)
+        rewards.append(reward)
+        xy_positions.append((next_state[0].item(), next_state[1].item()))
+        
+        state = next_state
 
-            total_reward += reward
-            state = next_state
-
-            xy_positions.append((next_state[0].item(), next_state[1].item()))
-            rewards.append(total_reward)
-
-            if done:
-                #pass
-                break
+        if done:
+            #pass
+            break
 
     # Plot the results
     plot_results(rewards, xy_positions)
 
 if __name__ == "__main__":
-    run_trained_agent(r"juststandup.pth")
+    run_trained_agent(r"juststandupnewrewardBEST.pth")
 
     

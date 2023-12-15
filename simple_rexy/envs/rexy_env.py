@@ -16,20 +16,18 @@ class SimpleRexyEnv(gym.Env):
     metadata = {'render_modes': ['human', 'rgb_array']}  
 
     #Reward Function Tuning Vals
-    FORWARD_YAW_THRESHOLD = 2 * pi / 4  # Adjusted threshold for alignment
-    ALIGNMENT_PENALTY = -30  # Increased penalty for misalignment
-    PITCH_DEGREES = 25  # Reduced maximum pitch threshold
+    FORWARD_YAW_THRESHOLD = 2 * pi / 5  # Adjusted threshold for alignment
+    ALIGNMENT_PENALTY = -50  # Penalty for misalignment
+    PITCH_DEGREES = 25  # Maximum pitch threshold
     MAX_PITCH_THRESHOLD = np.radians(PITCH_DEGREES)
-    TIPPING_PENALTY = -120  # Increased penalty for tipping
-    HEIGHT_REWARD = 60  # Increased reward for being at the correct height
-    HEIGHT_PENALTY = -400  # Increased penalty for being outside the height range
-    SURVIVAL_REWARD = 120  # Increased survival reward
-    TIME_PENALTY_SCALE = 0.015  # Adjusted time penalty scale
-    MAX_STEPS_EPISODE = 600  # Extended maximum episode steps
-    TIMEOUT_PENALTY = -40  # Increased penalty for reaching the timeout
-    X_DIST_REWARD_COEF = 700  # Increased coefficient for distance reward
-    X_VEL_REWARD_COEFF = 500 # high only bc m/s are the units
-    REACH_GOAL_REWARD = 250  # Increased reward for reaching the goal
+    TIPPING_PENALTY = -150  # Penalty for tipping
+    HEIGHT_REWARD = 100  # Reward for being at the correct height
+    HEIGHT_PENALTY = -100  # Penalty for being outside the height range
+    SURVIVAL_REWARD = 150  # Reward for staying alive
+    TIMEOUT_PENALTY = -50  # Penalty for reaching the timeout
+    X_DIST_REWARD_COEF = 0  # Coefficient for distance reward (de-emphasized)
+    X_VEL_REWARD_COEFF = 0  # Coefficient for X-velocity reward (de-emphasized)
+    REACH_GOAL_REWARD = 0  # Reward for reaching the goal (de-emphasized)
     
     def __init__(self, client = p.connect(p.GUI), self_collision_enabled = True): # NOTE : GUI OR DIRECT
         self._self_collision_enabled = self_collision_enabled
@@ -64,6 +62,9 @@ class SimpleRexyEnv(gym.Env):
         self.current_step = 0  # Initialize the current step
         self.first_obs = self.rexy.get_observation()
 
+        self.best_reward_yet = 0
+        self.new_best = False
+
     def step(self, action):
         """
         Takes 6-D array input, calls reward function and returns
@@ -81,11 +82,11 @@ class SimpleRexyEnv(gym.Env):
         rexy_ob = self.rexy.get_observation()
 
         ob = np.array(rexy_ob, dtype=np.float32)
-        reward = self.compute_reward(rexy_ob) 
+        reward, newbest = self.compute_reward(rexy_ob) 
         done = self.done
         
         self.current_step += 1  # Increment the current step at each call to step()
-        return ob, reward, done, dict()
+        return ob, reward, done, newbest
 
     def compute_reward(self, rexy_ob):
         """
@@ -105,32 +106,22 @@ class SimpleRexyEnv(gym.Env):
         
         print("------COMPUTE-REWARD TIME--------\n") if self.DEBUG_MODE else None
 
-        # Compute reward as L2 change in distance to goal
-        dist_to_goal = math.sqrt(((rexy_ob[0] - self.goal[0]) ** 2 +
-                                (rexy_ob[1] - self.goal[1]) ** 2))
-        
-        reward = max(self.prev_dist_to_goal - dist_to_goal, 0) * self.X_DIST_REWARD_COEF
+        # Initialize reward
+        reward = 0
 
-        # 1. X-velocity reward
-        reward += rexy_ob[-2] * self.X_VEL_REWARD_COEFF
-
-        # 2. Penalize if the robot is not facing forwards (based on yaw angle)
-        yaw_angle = rexy_ob[5] - self.first_obs [5]
-
+        # Penalize if the robot is not facing forwards (based on yaw angle)
+        yaw_angle = rexy_ob[5] - self.first_obs[5]
         if abs(yaw_angle) > self.FORWARD_YAW_THRESHOLD:
             reward += self.ALIGNMENT_PENALTY
-            print("Alignment penalty applied") if self.DEBUG_MODE else None
 
-        # 3. Punishes for tilting downwards too far (pitch)
+        # Punishes for tilting downwards too far (pitch)
         pitch_angle = rexy_ob[4]
         pitch_difference = abs(pitch_angle - self.first_obs[4])
-
         if pitch_difference > self.MAX_PITCH_THRESHOLD:
             reward += self.TIPPING_PENALTY
-            print("Tipping penalty applied") if self.DEBUG_MODE else None
-            self.done = True  # End the episode if tipping occurs
+            self.done = True
 
-        # 4. Rewards/punishes if Z height within .225 - .325 m
+        # Rewards/punishes based on Z height
         z_height = rexy_ob[2]
         if .145 < z_height <= .325:
             reward += self.HEIGHT_REWARD
@@ -138,29 +129,30 @@ class SimpleRexyEnv(gym.Env):
             reward += self.HEIGHT_PENALTY
             self.done = True
 
-        # 5. Survival reward for staying alive
+        # Survival reward for staying alive
         reward += self.SURVIVAL_REWARD
 
-        # 6. Timeout penalty
-        if self.current_step >= self.MAX_STEPS_EPISODE:
-            reward += self.TIMEOUT_PENALTY
+        # Timeout penalty
+        if self.current_step >= 600:
+            reward += 1000
+            print('got to the end!')
             self.done = True
 
-        # 7. Exit reward for reaching the goal
-        if dist_to_goal < .5:
-            reward += self.REACH_GOAL_REWARD
-            print("GOT TO THE GOAL")
-            self.done = True
+        #save if we broke a record (exclude weird fringe at start)
+        if reward > self.best_reward_yet and self.current_step > 100:
+            self.new_best = True
+            print('New High Score!')
+            self.best_reward_yet = reward
 
-        # Update prev_dist_to_goal for the next step
-        self.prev_dist_to_goal = dist_to_goal
-
-        print(f"DONE COMPUTING REWARD: {reward:.3f}") if self.DEBUG_MODE else None
-        return reward
+        return reward, self.new_best
         
     def reset(self, seed = None, options = {}):
         print("=== Resetting Environment ===") if self.DEBUG_MODE else None
         options, seed = options, seed #Worthless- avoids an error
+        
+        self.new_best = False
+        self.done = False
+        self.current_step = 0
 
         print("Resetting Rexy Pos...") if self.DEBUG_MODE else None
         p.restoreState(self.initial_state, physicsClientId=self.client)
@@ -174,6 +166,7 @@ class SimpleRexyEnv(gym.Env):
         print(f"Prev dist to goal: {self.prev_dist_to_goal:.3f}") if self.DEBUG_MODE else None
 
         info = {}
+        
 
         print(f"Observation (get_obs): {rexy_ob}") if self.DEBUG_MODE else None
         print(f"Info: {info}") if self.DEBUG_MODE else None

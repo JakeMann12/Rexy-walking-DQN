@@ -14,6 +14,7 @@ import cProfile
 import shutil
 import os
 import datetime
+from torch.utils.tensorboard import SummaryWriter
 
 # Define the neural network for DQN
 class Net(nn.Module):
@@ -54,6 +55,7 @@ class DQNAgent:
         self.env = gym.make(env).unwrapped
         self.num_actions = self.env.action_space.shape[0]
         self.num_states = self.env.observation_space.shape[0]
+        self.global_step = 0
 
         # Q-Networks
         self.q_network = Net(self.num_states, self.num_actions).to(self.device)
@@ -77,9 +79,20 @@ class DQNAgent:
         # Counter for Q-network updates
         self.update_counter = 0
 
+        #Tensorboard tracking
+        self.writer = self.make_writer('standuponly')
+        
+    def make_writer(self, log_dir):
+        log_dir = os.path.join('runs',log_dir)
+        if os.path.exists(log_dir):
+            shutil.rmtree(log_dir)
+        os.makedirs(log_dir)
+        writer = SummaryWriter(log_dir)
+        return writer
+
     def select_action(self, state):
         """
-        Chooses action based on epsilon-greedy method
+        Chooses action based on epsilon-greedy method, and increments global_step
         """
         if np.random.rand() <= self.epsilon:
             action = self.env.action_space.sample()  # RANDOM ACTION
@@ -88,7 +101,7 @@ class DQNAgent:
                 state = torch.FloatTensor(state).to(self.device)
                 q_values = self.q_network(state)
                 action = q_values.cpu().numpy()
-
+        self.global_step += 1
         return action
 
     def remember(self, state, action, reward, next_state, done):
@@ -115,6 +128,10 @@ class DQNAgent:
         target = target.unsqueeze(1).expand_as(q_values)
         loss = self.loss_fn(q_values, target)
 
+        # Log the loss and average Q-value
+        self.writer.add_scalar('Loss/Replay', loss.item(), self.global_step)
+        self.writer.add_scalar('Q-Value/Average', q_values.mean().item(), self.global_step)
+
         #decay epsilon- back in the replay
         self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
 
@@ -138,27 +155,31 @@ class DQNAgent:
             episode_rewards = []
             for episode in tqdm(range(num_episodes)):
                 state, _ = self.env.reset()
-                total_reward = 0
+                total_episode_reward = 0
 
                 while True:
                     action = self.select_action(state)
-                    next_state, reward, done, _ = self.env.step(action)
+                    next_state, reward, done, newbest = self.env.step(action)
                     self.remember(state, action, reward, next_state, done)
-                    total_reward += reward
+                    total_episode_reward += reward
                     state = next_state
+
+                    if newbest == True:
+                        print('got a new best reward for this run!')
+                        self.save_model(model+'BEST')
                     # NOTE: moved Decay epsilon into each step instead of in the replay funct.
-                    
                     if done:
+                        self.writer.add_scalar('Reward/Episode', total_episode_reward, self.global_step)
                         break
 
                 #NOTE: put this back in every episode if it takes too long time-wise to learn.
                 self.replay(self.batch_size)
 
                 # Append episode reward to the list
-                episode_rewards.append(total_reward)
+                episode_rewards.append(total_episode_reward)
 
                 if episode == num_episodes - 1:
-                    print(f"After {episode+1} episodes, Total Reward: {total_reward:.2f}")
+                    print(f"After {episode+1} episodes, Total Avg Reward: {np.mean(episode_rewards):.2f}")
 
             epoch_rewards.append(episode_rewards)
             print(f"Epoch {epoch + 1} Completed")
@@ -173,6 +194,8 @@ class DQNAgent:
 
         if plot:
             self.plot_rewards(epoch_rewards)
+
+        self.writer.close()
 
     def save_model(self, model_path="dqn_model.pth"):
         model_path = os.path.join('.pth Files', model_path)
@@ -212,7 +235,7 @@ class DQNAgent:
                 else:
                     ax = axs  # When displaying a single plot, axs is not a 2D array
 
-                ax.plot(episode_rewards)
+                ax.plot(episode_rewards) if i != 1 else ax.plot(episode_rewards[5:]) #skip very first one
                 ax.set_title(f"Epoch {epoch_index}")
                 ax.set_xlabel("Episode")
                 ax.set_ylabel("Reward")
@@ -226,22 +249,21 @@ class DQNAgent:
         plt.show()
 
     def create_and_move_prof_file(self):
-        # Create a folder for profiler outputs if it doesn't exist
+        # Specify the ProfilerOutputs directory
         profiler_output_folder = "ProfilerOutputs"
-        if not os.path.exists(profiler_output_folder):
-            os.makedirs(profiler_output_folder)
-
+        # Clear the contents of the ProfilerOutputs directory (including subdirectories)
+        if os.path.exists(profiler_output_folder):
+            shutil.rmtree(profiler_output_folder)
+        # Recreate the empty ProfilerOutputs directory
+        os.makedirs(profiler_output_folder)
         # Get the current date and time in the desired format (e.g., 'Dec13-14:58')
         current_time = datetime.datetime.now().strftime('%b%d-%H%M')
-        
         # Move existing .prof files to ProfilerOutputs folder
         for filename in os.listdir():
             if filename.endswith(".prof"):
                 shutil.move(filename, os.path.join(profiler_output_folder, filename))
-
         # Create a new .prof file with the current date/time
         new_prof_filename = f"{current_time}.prof"
-        new_prof_filepath = os.path.join(new_prof_filename)
-
+        new_prof_filepath = os.path.join(profiler_output_folder, new_prof_filename)
         # Return the path to the newly created .prof file
         return new_prof_filepath

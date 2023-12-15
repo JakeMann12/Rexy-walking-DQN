@@ -15,6 +15,6 @@ def train_rexy(model=None, num_epochs=200, num_episodes=300, save=True, profile=
 
 if __name__ == "__main__":
     
-    train_rexy(model='juststandup.pth', 
-               num_epochs=5 , num_episodes=1000, 
+    train_rexy(model='juststandupnewreward.pth', 
+               num_epochs=20 , num_episodes=1000, 
                save=True, plot = True, profile = 0)
