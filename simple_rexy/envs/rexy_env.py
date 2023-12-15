@@ -17,40 +17,39 @@ class SimpleRexyEnv(gym.Env):
 
     #Reward Function Tuning Vals
     FORWARD_YAW_THRESHOLD = 2 * pi / 5  # Adjusted threshold for alignment
-    ALIGNMENT_PENALTY = -50  # Penalty for misalignment
+    ALIGNMENT_PENALTY = 0  # Penalty for misalignment
     PITCH_DEGREES = 25  # Maximum pitch threshold
     MAX_PITCH_THRESHOLD = np.radians(PITCH_DEGREES)
-    TIPPING_PENALTY = -150  # Penalty for tipping
-    HEIGHT_REWARD = 100  # Reward for being at the correct height
-    HEIGHT_PENALTY = -100  # Penalty for being outside the height range
-    SURVIVAL_REWARD = 150  # Reward for staying alive
-    TIMEOUT_PENALTY = -50  # Penalty for reaching the timeout
+    TIPPING_PENALTY = 0  # Penalty for tipping
+    HEIGHT_REWARD = 1  # Reward for being at the correct height
+    HEIGHT_PENALTY = 0  # Penalty for being outside the height range
+    SURVIVAL_REWARD = 1.1  # Reward for staying alive
+    TIMEOUT_PENALTY = 0  # Penalty for reaching the timeout
     X_DIST_REWARD_COEF = 0  # Coefficient for distance reward (de-emphasized)
     X_VEL_REWARD_COEFF = 0  # Coefficient for X-velocity reward (de-emphasized)
     REACH_GOAL_REWARD = 0  # Reward for reaching the goal (de-emphasized)
     
-    def __init__(self, client = p.connect(p.GUI), self_collision_enabled = True): # NOTE : GUI OR DIRECT
-        self._self_collision_enabled = self_collision_enabled
-        self.servoindices = [2, 4, 6, 10, 12, 14] #hardcoded
-
-        self.action_space = gym.spaces.box.Box(
-            low = np.float32(-.25*pi*np.ones_like(self.servoindices)), # < -.4 * 180 degrees for all - prob overkill still
-            high = np.float32(.25*pi*np.ones_like(self.servoindices)))
-        self.observation_space = gym.spaces.box.Box(
-            # x, y, z positions, roll, pitch, yaw angles, x and y velocity components. NOTE: REMOVED x and y position of goal
-            low =np.float32(np.array([-5, -5,  0, -pi, -pi/2, -pi, -1, -1])),
-            high=np.float32(np.array([ 5,  5,  .4,  pi,  pi/2,  pi,  5,  5]))) 
-        
+    def __init__(self, client):
+        self._self_collision_enabled = True
+    
         self.client = client 
         self.rexy = Rexy(self.client)
         Plane(self.client)
         self.goal = (1.5, 0) #hardcoded for now- moved up from reset
         Goal(self.client, self.goal)
-        
         # Save the initial state
+        self.rexy.apply_action([0]*6)
         self.initial_state = p.saveState(physicsClientId=self.client)
-        # Reduce length of episodes for RL algorithms
         p.setTimeStep(1/30, self.client)
+
+        num_joints = len(self.rexy.servo_joints)
+        self.action_space = gym.spaces.box.Box(
+            low = np.float32(-.25*pi*np.ones_like(self.rexy.servo_joints)), # < -.4 * 180 degrees for all - prob overkill still
+            high = np.float32(.25*pi*np.ones_like(self.rexy.servo_joints)))
+        self.observation_space = gym.spaces.Box(
+            low=np.float32(np.array([-5, -5, 0, -pi, -pi/2, -pi, -1, -1] + [-.25*pi]*num_joints + [-self.rexy.max_vel] * num_joints)),
+            high=np.float32(np.array([5, 5, .4, pi, pi/2, pi, 5, 5] + [.25*pi]*num_joints + [self.rexy.max_vel] * num_joints))
+        ) 
 
         self.DEBUG_MODE = False
 
@@ -113,6 +112,7 @@ class SimpleRexyEnv(gym.Env):
         yaw_angle = rexy_ob[5] - self.first_obs[5]
         if abs(yaw_angle) > self.FORWARD_YAW_THRESHOLD:
             reward += self.ALIGNMENT_PENALTY
+            self.done = True
 
         # Punishes for tilting downwards too far (pitch)
         pitch_angle = rexy_ob[4]
@@ -130,7 +130,7 @@ class SimpleRexyEnv(gym.Env):
             self.done = True
 
         # Survival reward for staying alive
-        reward += self.SURVIVAL_REWARD
+        reward += self.SURVIVAL_REWARD ** self.current_step
 
         # Timeout penalty
         if self.current_step >= 600:

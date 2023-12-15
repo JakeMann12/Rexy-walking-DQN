@@ -38,7 +38,7 @@ class Net(nn.Module):
 
 # Define the DQN agent
 class DQNAgent:
-    def __init__(self, env, BATCH_SIZE=128, LR=0.01, GAMMA=0.90, 
+    def __init__(self, env, client, BATCH_SIZE=128, LR=0.01, GAMMA=0.90, 
                  EPSILON=0.9, EPSILON_DECAY=0.995, EPSILON_MIN=0.01, MEMORY_CAPACITY=2000, 
                  Q_NETWORK_ITERATION=100):
         
@@ -52,10 +52,12 @@ class DQNAgent:
         self.device = torch.device("cpu")
 
         # ESTABLISH REXY ENV
-        self.env = gym.make(env).unwrapped
+        self.client = client
+        self.env = gym.make(env, client = self.client).unwrapped
         self.num_actions = self.env.action_space.shape[0]
         self.num_states = self.env.observation_space.shape[0]
         self.global_step = 0
+        self.global_episode = 0 
 
         # Q-Networks
         self.q_network = Net(self.num_states, self.num_actions).to(self.device)
@@ -80,13 +82,15 @@ class DQNAgent:
         self.update_counter = 0
 
         #Tensorboard tracking
-        self.writer = self.make_writer('standuponly')
+        self.writer = self.make_writer('jointinputs')
         
     def make_writer(self, log_dir):
-        log_dir = os.path.join('runs',log_dir)
-        if os.path.exists(log_dir):
-            shutil.rmtree(log_dir)
-        os.makedirs(log_dir)
+        # Generate a timestamp
+        timestamp = datetime.datetime.now().strftime('%m%d-%H%M')
+        # Append the timestamp to the log directory name
+        log_dir = os.path.join('runs', log_dir, timestamp)
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
         writer = SummaryWriter(log_dir)
         return writer
 
@@ -158,6 +162,7 @@ class DQNAgent:
                 total_episode_reward = 0
 
                 while True:
+                    self.global_episode += 1
                     action = self.select_action(state)
                     next_state, reward, done, newbest = self.env.step(action)
                     self.remember(state, action, reward, next_state, done)
@@ -169,7 +174,7 @@ class DQNAgent:
                         self.save_model(model+'BEST')
                     # NOTE: moved Decay epsilon into each step instead of in the replay funct.
                     if done:
-                        self.writer.add_scalar('Reward/Episode', total_episode_reward, self.global_step)
+                        self.writer.add_scalar('Reward/Episode', total_episode_reward, self.global_episode)
                         break
 
                 #NOTE: put this back in every episode if it takes too long time-wise to learn.
@@ -184,7 +189,7 @@ class DQNAgent:
             epoch_rewards.append(episode_rewards)
             print(f"Epoch {epoch + 1} Completed")
 
-            if save and epoch == num_epochs//3:
+            if save and epoch % (num_epochs // 10) == 0:
                 self.save_model(model)
 
         if profile:

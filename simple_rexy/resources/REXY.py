@@ -12,8 +12,7 @@ class Rexy:
             physicsClientId=client,
             flags=p.URDF_USE_INERTIA_FROM_FILE,
         )  # NOTE: added flags in extra from hello_bullet
-        self.servo_joints = [2, 4, 6, 10, 12, 14
-        ]  
+        self.servo_joints = [2, 4, 6, 10, 12, 14] #hardcoded  
         self.max_force = 1.6671305  # NOTE: Pretty sure is Nm
         self.max_vel = 2*np.pi/1.14 #NOTE: somehwat assuming rad / sec
 
@@ -40,13 +39,17 @@ class Rexy:
 
     def get_observation(self):
         """
-        returns the x, y, z positions, and the roll, pitch, yaw angles, along with the x and y velocity components
+        Returns the x, y, z positions, and the roll, pitch, yaw angles, along with the x and y velocity components,
+        and the joint angles for each of the servo joints.
         """
         # Get the position and orientation of the rexy in the simulation
         pos, orientation = p.getBasePositionAndOrientation(self.rexy, self.client)
         rpy = p.getEulerFromQuaternion(orientation)
         # Get the velocity of the rexy
         vel = p.getBaseVelocity(self.rexy, self.client)[0][0:2]
-        # Concatenate position, orientation, velocity
-        observation = (pos[0], pos[1], pos[2], rpy[0], rpy[1], rpy[2], vel[0], vel[1])
+        # Get the joint angles
+        joint_angles = [p.getJointState(self.rexy, joint_index, self.client)[0] for joint_index in self.servo_joints]
+        joint_speeds = [p.getJointState(self.rexy, joint_index, self.client)[1] for joint_index in self.servo_joints]
+        # Concatenate position, orientation, velocity, and joint angles
+        observation = (pos[0], pos[1], pos[2], rpy[0], rpy[1], rpy[2], vel[0], vel[1]) + tuple(joint_angles) + tuple(joint_speeds)
         return np.array(observation, dtype=np.float32)

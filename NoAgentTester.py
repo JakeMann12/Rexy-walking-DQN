@@ -59,7 +59,7 @@ def plot_results(rewards, xy_positions):
 
 def run_trained_agent(model_path, num_episodes = 1):
     # Initialize DQNAgent
-    agent = DQNAgent('rexy-v0', BATCH_SIZE=128, LR=0.01, GAMMA=0.90,
+    agent = DQNAgent('rexy-v0', p.connect(p.GUI), BATCH_SIZE=128, LR=0.01, GAMMA=0.90,
                      EPSILON=0.0,  # Set epsilon to 0 for a deterministic policy
                      EPSILON_DECAY=1.0,  # No epsilon decay during the run
                      EPSILON_MIN=0.0,  # Minimum epsilon during the run
@@ -77,8 +77,9 @@ def run_trained_agent(model_path, num_episodes = 1):
     
     while True:
         action = agent.select_action(state)
+        #action = [0]*6 
         next_state, reward, done, _ = agent.env.step(action)
-
+        print(next_state[-6:])
         rewards.append(reward)
         xy_positions.append((next_state[0].item(), next_state[1].item()))
         
@@ -92,6 +93,6 @@ def run_trained_agent(model_path, num_episodes = 1):
     plot_results(rewards, xy_positions)
 
 if __name__ == "__main__":
-    run_trained_agent(r"juststandupnewrewardBEST.pth")
+    run_trained_agent(r"juststandupnewreward3.pth")
 
     
