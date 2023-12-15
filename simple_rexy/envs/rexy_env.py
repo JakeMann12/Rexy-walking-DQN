@@ -103,7 +103,7 @@ class SimpleRexyEnv(gym.Env):
         7. Exit condition for reaching the goal
         """
         
-        print("------COMPUTEREWARD TIME--------\n") if self.DEBUG_MODE else None
+        print("------COMPUTE-REWARD TIME--------\n") if self.DEBUG_MODE else None
 
         # Compute reward as L2 change in distance to goal
         dist_to_goal = math.sqrt(((rexy_ob[0] - self.goal[0]) ** 2 +
@@ -111,17 +111,17 @@ class SimpleRexyEnv(gym.Env):
         
         reward = max(self.prev_dist_to_goal - dist_to_goal, 0) * self.X_DIST_REWARD_COEF
 
-        # 2. X-velocity reward
+        # 1. X-velocity reward
         reward += rexy_ob[-2] * self.X_VEL_REWARD_COEFF
 
-        # Penalize if the robot is not facing forwards (based on yaw angle)
+        # 2. Penalize if the robot is not facing forwards (based on yaw angle)
         yaw_angle = rexy_ob[5] - self.first_obs [5]
 
         if abs(yaw_angle) > self.FORWARD_YAW_THRESHOLD:
             reward += self.ALIGNMENT_PENALTY
             print("Alignment penalty applied") if self.DEBUG_MODE else None
 
-        # Punishes for tilting downwards too far (pitch)
+        # 3. Punishes for tilting downwards too far (pitch)
         pitch_angle = rexy_ob[4]
         pitch_difference = abs(pitch_angle - self.first_obs[4])
 
@@ -130,7 +130,7 @@ class SimpleRexyEnv(gym.Env):
             print("Tipping penalty applied") if self.DEBUG_MODE else None
             self.done = True  # End the episode if tipping occurs
 
-        # Rewards if Z height within .225 - .325 m
+        # 4. Rewards/punishes if Z height within .225 - .325 m
         z_height = rexy_ob[2]
         if .145 < z_height <= .325:
             reward += self.HEIGHT_REWARD
@@ -138,21 +138,16 @@ class SimpleRexyEnv(gym.Env):
             reward += self.HEIGHT_PENALTY
             self.done = True
 
-        # Survival reward for staying alive
+        # 5. Survival reward for staying alive
         reward += self.SURVIVAL_REWARD
 
-        # Time-dependent penalty for taking too long
-        time_penalty = -self.TIME_PENALTY_SCALE * self.current_step
-        reward += time_penalty
-
-        # Timeout
+        # 6. Timeout penalty
         if self.current_step >= self.MAX_STEPS_EPISODE:
             reward += self.TIMEOUT_PENALTY
             self.done = True
 
-        # Exit condition for reaching the goal
-        # Done by reaching goal
-        if dist_to_goal < 1:
+        # 7. Exit reward for reaching the goal
+        if dist_to_goal < .5:
             reward += self.REACH_GOAL_REWARD
             print("GOT TO THE GOAL")
             self.done = True

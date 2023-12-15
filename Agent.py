@@ -207,10 +207,15 @@ class DQNAgent:
             episode_rewards = epoch_rewards[epoch_index - 1]  # Adjust for 0-based indexing
 
             if episode_rewards is not None and len(episode_rewards) > 0:
-                axs[row, col].plot(episode_rewards)
-                axs[row, col].set_title(f"Epoch {epoch_index}")
-                axs[row, col].set_xlabel("Episode")
-                axs[row, col].set_ylabel("Reward")
+                if num_epochs_to_display > 1:
+                    ax = axs[row, col]
+                else:
+                    ax = axs  # When displaying a single plot, axs is not a 2D array
+
+                ax.plot(episode_rewards)
+                ax.set_title(f"Epoch {epoch_index}")
+                ax.set_xlabel("Episode")
+                ax.set_ylabel("Reward")
             else:
                 axs[row, col].set_title(f"Epoch {epoch_index} (No Data)")
                 axs[row, col].axis('off')

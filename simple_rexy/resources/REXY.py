@@ -15,7 +15,7 @@ class Rexy:
         self.servo_joints = [2, 4, 6, 10, 12, 14
         ]  
         self.max_force = 1.6671305  # NOTE: Pretty sure is Nm
-        
+        self.max_vel = 2*np.pi/1.14 #NOTE: somehwat assuming rad / sec
 
     def get_ids(self):
         return self.client, self.rexy
@@ -35,7 +35,7 @@ class Rexy:
                 controlMode=p.POSITION_CONTROL,  # Use POSITION_CONTROL for position control
                 targetPosition=target_position,
                 force=self.max_force,
-                maxVelocity = 2*np.pi/1.14 #NOTE: somehwat assuming rad / sec
+                maxVelocity = self.max_vel
             )
 
     def get_observation(self):

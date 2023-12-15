@@ -1,10 +1,4 @@
 from Agent import DQNAgent
-import matplotlib.pyplot as plt
-import numpy as np
-import cProfile
-import shutil
-import os
-import datetime
 
 def train_rexy(model=None, num_epochs=200, num_episodes=300, save=True, profile=False, plot=False):
 
@@ -14,10 +8,13 @@ def train_rexy(model=None, num_epochs=200, num_episodes=300, save=True, profile=
                      Q_NETWORK_ITERATION=80)
     agent.load_model(model)
 
-    agent.train(model=model, num_epochs=num_epochs, num_episodes=num_episodes, save=save, profile=profile, plot=plot)
+    agent.train(model=model, num_epochs=num_epochs, 
+                num_episodes=num_episodes, save=save, 
+                profile=profile, plot=plot)
 
 
 if __name__ == "__main__":
-    train_rexy(model='dqn_model.pth', 
-               num_epochs=50 , num_episodes=200, 
-               save=True, plot = True, profile = False)
+    
+    train_rexy(model='juststandup.pth', 
+               num_epochs=5 , num_episodes=1000, 
+               save=True, plot = True, profile = 0)
