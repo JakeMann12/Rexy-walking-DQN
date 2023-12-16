@@ -4,8 +4,8 @@ import pybullet as p
 def train_rexy(model=None, num_epochs=200, num_episodes=300, save=True, track_tf = False, profile=False, plot=False):
 
     # Initialize DQNAgent
-    agent = DQNAgent('rexy-v0', p.connect(p.DIRECT), track_tf = track_tf, BATCH_SIZE=512, LR=0.001, GAMMA=0.95,
-                     EPSILON=1.0, EPSILON_DECAY=0.995, EPSILON_MIN=0.05, MEMORY_CAPACITY=4000,
+    agent = DQNAgent('rexy-v0', p.connect(p.DIRECT), track_tf = track_tf, BATCH_SIZE=128, LR=0.001, GAMMA=0.95,
+                     EPSILON=1.0, EPSILON_DECAY=0.995, EPSILON_MIN=0.05, MEMORY_CAPACITY=2000,
                      Q_NETWORK_ITERATION=100)
     agent.load_model(model)
 

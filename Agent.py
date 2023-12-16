@@ -160,15 +160,15 @@ class DQNAgent:
             profiler = cProfile.Profile()
             profiler.enable()
 
-        epoch_rewards = []  # List to store rewards for each epoch
-        for epoch in range(num_epochs):
+        # Initialize a NumPy array for storing rewards
+        epoch_rewards = np.zeros((num_epochs, num_episodes))
 
-            episode_rewards = []
+        for epoch in range(num_epochs):
             for episode in tqdm(range(num_episodes)):
                 self.global_episode += 1
                 state, _ = self.env.reset()
                 total_episode_reward = 0
-                
+
                 while True:
                     self.current_step += 1
                     action = self.select_action(state)
@@ -180,28 +180,23 @@ class DQNAgent:
                     if newbest == True and self.current_step > 100:
                         print('got a new best reward for this run!')
                         self.save_model(model+'BEST')
-                    # NOTE: moved Decay epsilon into each step instead of in the replay funct.
-                    
-                    self.replay(self.batch_size)
-                    self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
-                    
+
                     if done:
                         self.current_step = 0
                         self.writer.add_scalar('Reward/Episode', total_episode_reward, self.global_episode) if self.track_tf else None
                         break
 
-                #NOTE: put this back in every episode if it takes too long time-wise to learn.
-                
-                #decay epsilon- back next to the replay
-                
+                # Store the episode reward in the NumPy array
+                epoch_rewards[epoch, episode] = total_episode_reward
 
-                # Append episode reward to the list
-                episode_rewards.append(total_episode_reward)
+                # Decay epsilon here, post-episode
+                self.replay(self.batch_size)
+                self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
 
                 if episode == num_episodes - 1:
-                    print(f"After {episode+1} episodes, Total Avg Reward: {np.mean(episode_rewards):.2f}")
+                    avg_reward = np.mean(epoch_rewards[epoch, :])
+                    print(f"After {episode+1} episodes, Total Avg Reward: {avg_reward:.2f}")
 
-            epoch_rewards.append(episode_rewards)
             print(f"Epoch {epoch + 1} Completed")
 
             if save and epoch % (num_epochs // 10) == 0 or save and num_epochs == 0:
@@ -217,68 +212,17 @@ class DQNAgent:
 
         self.writer.close() if self.track_tf else None
 
-    def async_train(self, model=None, num_epochs=200, num_episodes=300, save=True, profile=False, plot=False):
-        if profile:
-            profiler = cProfile.Profile()
-            profiler.enable()
-
-        epoch_rewards = []
-        self.experience_queue = queue.Queue()
-        
-        # Start the environment interaction thread
-        total_steps = num_episodes * 600
-        env_thread = EnvironmentThread(self, total_steps)
-        env_thread.start()
-
-        for epoch in range(num_epochs):
-            episode_rewards = []
-            for episode in tqdm(range(num_episodes)):
-                self.global_episode += 1
-                total_episode_reward = 0
-
-                for _ in range(600):
-                    if not self.experience_queue.empty():
-                        state, action, reward, next_state, done = self.experience_queue.get()
-                        self.remember(state, action, reward, next_state, done)
-                        self.replay(self.batch_size)
-                        total_episode_reward += reward
-                        self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
-
-                        if done:
-                            break
-
-                episode_rewards.append(total_episode_reward)
-                self.writer.add_scalar('Reward/Episode', total_episode_reward, self.global_episode) if self.track_tf else None
-
-                if save and self.global_episode % 100 == 0:  # Save periodically
-                    self.save_model(model)
-
-            epoch_rewards.append(episode_rewards)
-            print(f"Epoch {epoch + 1} Completed, Avg Reward: {np.mean(episode_rewards):.2f}")
-
-        if plot:
-            self.plot_rewards(epoch_rewards)
-
-        # Wait for the environment thread to finish
-        env_thread.join()
-
-        if profile:
-            profiler.disable()
-            new_prof_filepath = self.create_and_move_prof_file()
-            profiler.dump_stats(new_prof_filepath)
-
-        self.writer.close() if self.track_tf else None
 
     def save_model(self, model_path="dqn_model.pth"):
         model_path = os.path.join('.pth Files', model_path)
         torch.save(self.q_network.state_dict(), model_path)
         print(f"model saved! to {model_path}")
+        #print("Q-Network Weights:")
+        #for name, param in self.q_network.state_dict().items():
+            #print(name, param)
 
     def load_model(self, model_path="dqn_model.pth"):
         model_path = os.path.join('.pth Files', model_path)
-        print("Q-Network Weights:")
-        for name, param in self.q_network.state_dict().items():
-            print(name, param)
         if os.path.exists(model_path):
             self.q_network.load_state_dict(torch.load(model_path, map_location=self.device))
             self.target_network.load_state_dict(
