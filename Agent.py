@@ -38,7 +38,7 @@ class Net(nn.Module):
 
 # Define the DQN agent
 class DQNAgent:
-    def __init__(self, env, client, BATCH_SIZE=128, LR=0.01, GAMMA=0.90, 
+    def __init__(self, env, client, track_tf = False, BATCH_SIZE=128, LR=0.01, GAMMA=0.90, 
                  EPSILON=0.9, EPSILON_DECAY=0.995, EPSILON_MIN=0.01, MEMORY_CAPACITY=2000, 
                  Q_NETWORK_ITERATION=100):
         
@@ -82,13 +82,15 @@ class DQNAgent:
         self.update_counter = 0
 
         #Tensorboard tracking
-        self.writer = self.make_writer('jointinputs')
+        self.track_tf = track_tf
+        self.writer = self.make_writer('jointinputs') if self.track_tf else None
+        
         
     def make_writer(self, log_dir):
         # Generate a timestamp
         timestamp = datetime.datetime.now().strftime('%m%d-%H%M')
         # Append the timestamp to the log directory name
-        log_dir = os.path.join('TBoard Files', log_dir, timestamp)
+        log_dir = os.path.join('TBoardFiles', log_dir, timestamp)
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
         writer = SummaryWriter(log_dir)
@@ -133,8 +135,8 @@ class DQNAgent:
         loss = self.loss_fn(q_values, target)
 
         # Log the loss and average Q-value
-        self.writer.add_scalar('Loss/Replay', loss.item(), self.global_step)
-        self.writer.add_scalar('Q-Value/Average', q_values.mean().item(), self.global_step)
+        self.writer.add_scalar('Loss/Replay', loss.item(), self.global_step) if self.track_tf else None
+        self.writer.add_scalar('Q-Value/Average', q_values.mean().item(), self.global_step) if self.track_tf else None
 
         #decay epsilon- back in the replay
         self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
@@ -174,7 +176,7 @@ class DQNAgent:
                         self.save_model(model+'BEST')
                     # NOTE: moved Decay epsilon into each step instead of in the replay funct.
                     if done:
-                        self.writer.add_scalar('Reward/Episode', total_episode_reward, self.global_episode)
+                        self.writer.add_scalar('Reward/Episode', total_episode_reward, self.global_episode) if self.track_tf else None
                         break
 
                 #NOTE: put this back in every episode if it takes too long time-wise to learn.
@@ -200,7 +202,7 @@ class DQNAgent:
         if plot:
             self.plot_rewards(epoch_rewards)
 
-        self.writer.close()
+        self.writer.close() if self.track_tf else None
 
     def save_model(self, model_path="dqn_model.pth"):
         model_path = os.path.join('.pth Files', model_path)

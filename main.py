@@ -1,10 +1,10 @@
 from Agent import DQNAgent
 import pybullet as p
 
-def train_rexy(model=None, num_epochs=200, num_episodes=300, save=True, profile=False, plot=False):
+def train_rexy(model=None, num_epochs=200, num_episodes=300, save=True, track_tf = False, profile=False, plot=False):
 
     # Initialize DQNAgent
-    agent = DQNAgent('rexy-v0', p.connect(p.DIRECT), BATCH_SIZE=256, LR=0.0006, GAMMA=0.90,
+    agent = DQNAgent('rexy-v0', p.connect(p.DIRECT), track_tf = track_tf, BATCH_SIZE=256, LR=0.0006, GAMMA=0.90,
                      EPSILON=0.9, EPSILON_DECAY=0.995, EPSILON_MIN=0.05, MEMORY_CAPACITY=2000,
                      Q_NETWORK_ITERATION=100)
     agent.load_model(model)
@@ -17,5 +17,16 @@ def train_rexy(model=None, num_epochs=200, num_episodes=300, save=True, profile=
 if __name__ == "__main__":
     
     train_rexy(model='juststandup.pth', 
-               num_epochs=10 , num_episodes=100, 
-               save=True, plot = True, profile = 1)
+               num_epochs=1000 , num_episodes=2000, 
+               track_tf = 0,
+               save=True, plot = 0, profile = 0)
+    
+    train_rexy(model='juststandup.pth', 
+               num_epochs=1000 , num_episodes=2000, 
+               track_tf = 0,
+               save=True, plot = 0, profile = 0)
+    
+    train_rexy(model='juststandup.pth', 
+               num_epochs=1000 , num_episodes=2000, 
+               track_tf = 0,
+               save=True, plot = 0, profile = 0)
