@@ -15,6 +15,7 @@ import shutil
 import os
 import datetime
 from torch.utils.tensorboard import SummaryWriter
+from torch.cuda.amp import autocast, GradScaler
 
 # Define the neural network for DQN
 class Net(nn.Module):
@@ -49,7 +50,6 @@ class DQNAgent:
         else:
             self.device = torch.device("cpu")
             print("GPU is not available. Using CPU.")
-        self.device = torch.device("cpu")
 
         # ESTABLISH REXY ENV
         self.client = client
@@ -86,6 +86,8 @@ class DQNAgent:
         self.track_tf = track_tf
         self.writer = self.make_writer('jointinputs') if self.track_tf else None
         
+        #AMP COMPONENTS
+        self.scaler = GradScaler()
         
     def make_writer(self, log_dir):
         # Generate a timestamp
@@ -121,32 +123,37 @@ class DQNAgent:
         batch = random.sample(self.memory, batch_size)
         states, actions, rewards, next_states, dones = zip(*batch)
 
-        # Convert states to a tensor
         states = torch.FloatTensor(np.array(states)).to(self.device)
         actions = torch.FloatTensor(np.array(actions)).to(self.device)
         rewards = torch.FloatTensor(rewards).to(self.device)
         next_states = torch.FloatTensor(np.array(next_states)).to(self.device)
         dones = torch.FloatTensor(dones).to(self.device)
 
-        # Q-learning update
-        q_values = self.q_network(states)
-        target_q_values = self.target_network(next_states).detach()
-        target = rewards + self.gamma * (1 - dones) * target_q_values.max(dim=1)[0]
-        target = target.unsqueeze(1).expand_as(q_values)
-        loss = self.loss_fn(q_values, target)
-
-        # Log the loss and average Q-value
-        self.writer.add_scalar('Loss/Replay', loss.item(), self.global_step) if self.track_tf else None
-        self.writer.add_scalar('Q-Value/Average', q_values.mean().item(), self.global_step) if self.track_tf else None
+        self.q_network.to(self.device)
+        self.target_network.to(self.device)
 
         self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
 
-        # Update target network
+        with autocast():
+            q_values = self.q_network(states)
+            target_q_values = self.target_network(next_states).detach()
+            target = rewards + self.gamma * (1 - dones) * target_q_values.max(dim=1)[0]
+            target = target.unsqueeze(1).expand_as(q_values)
+            loss = self.loss_fn(q_values, target)
+
+        self.scaler.scale(loss).backward()
+        self.scaler.step(self.optimizer)
+        self.scaler.update()
+
+        # Update target network and global step
         self.update_counter += 1
         if self.update_counter % self.q_network_iteration == 0:
             self.target_network.load_state_dict(self.q_network.state_dict())
+
+        # Logging
+        if self.track_tf:
+            self.writer.add_scalar('Loss/Replay', loss.item(), self.global_step)
+            self.writer.add_scalar('Q-Value/Average', q_values.mean().item(), self.global_step)
 
     def train(self, model = None, num_epochs=200, num_episodes=300, save=True, profile=False, plot=False):
         if profile:
@@ -174,15 +181,19 @@ class DQNAgent:
                         print('got a new best reward for this run!')
                         self.save_model(model+'BEST')
                     # NOTE: moved Decay epsilon into each step instead of in the replay funct.
+                    
+                    self.replay(self.batch_size)
+                    self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
+                    
                     if done:
                         self.current_step = 0
                         self.writer.add_scalar('Reward/Episode', total_episode_reward, self.global_episode) if self.track_tf else None
                         break
 
                 #NOTE: put this back in every episode if it takes too long time-wise to learn.
-                self.replay(self.batch_size)
+                
                 #decay epsilon- back next to the replay
-                self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
+                
 
                 # Append episode reward to the list
                 episode_rewards.append(total_episode_reward)
@@ -193,7 +204,7 @@ class DQNAgent:
             epoch_rewards.append(episode_rewards)
             print(f"Epoch {epoch + 1} Completed")
 
-            if save and epoch % (num_epochs // 10) == 0:
+            if save and epoch % (num_epochs // 10) == 0 or save and num_epochs == 0:
                 self.save_model(model)
 
         if profile:
@@ -206,6 +217,58 @@ class DQNAgent:
 
         self.writer.close() if self.track_tf else None
 
+    def async_train(self, model=None, num_epochs=200, num_episodes=300, save=True, profile=False, plot=False):
+        if profile:
+            profiler = cProfile.Profile()
+            profiler.enable()
+
+        epoch_rewards = []
+        self.experience_queue = queue.Queue()
+        
+        # Start the environment interaction thread
+        total_steps = num_episodes * 600
+        env_thread = EnvironmentThread(self, total_steps)
+        env_thread.start()
+
+        for epoch in range(num_epochs):
+            episode_rewards = []
+            for episode in tqdm(range(num_episodes)):
+                self.global_episode += 1
+                total_episode_reward = 0
+
+                for _ in range(600):
+                    if not self.experience_queue.empty():
+                        state, action, reward, next_state, done = self.experience_queue.get()
+                        self.remember(state, action, reward, next_state, done)
+                        self.replay(self.batch_size)
+                        total_episode_reward += reward
+                        self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
+
+                        if done:
+                            break
+
+                episode_rewards.append(total_episode_reward)
+                self.writer.add_scalar('Reward/Episode', total_episode_reward, self.global_episode) if self.track_tf else None
+
+                if save and self.global_episode % 100 == 0:  # Save periodically
+                    self.save_model(model)
+
+            epoch_rewards.append(episode_rewards)
+            print(f"Epoch {epoch + 1} Completed, Avg Reward: {np.mean(episode_rewards):.2f}")
+
+        if plot:
+            self.plot_rewards(epoch_rewards)
+
+        # Wait for the environment thread to finish
+        env_thread.join()
+
+        if profile:
+            profiler.disable()
+            new_prof_filepath = self.create_and_move_prof_file()
+            profiler.dump_stats(new_prof_filepath)
+
+        self.writer.close() if self.track_tf else None
+
     def save_model(self, model_path="dqn_model.pth"):
         model_path = os.path.join('.pth Files', model_path)
         torch.save(self.q_network.state_dict(), model_path)
@@ -213,6 +276,9 @@ class DQNAgent:
 
     def load_model(self, model_path="dqn_model.pth"):
         model_path = os.path.join('.pth Files', model_path)
+        print("Q-Network Weights:")
+        for name, param in self.q_network.state_dict().items():
+            print(name, param)
         if os.path.exists(model_path):
             self.q_network.load_state_dict(torch.load(model_path, map_location=self.device))
             self.target_network.load_state_dict(
@@ -276,3 +342,25 @@ class DQNAgent:
         new_prof_filepath = os.path.join(profiler_output_folder, new_prof_filename)
         # Return the path to the newly created .prof file
         return new_prof_filepath
+    
+from threading import Thread
+import queue
+
+class EnvironmentThread(Thread):
+    def __init__(self, agent, max_steps):
+        Thread.__init__(self)
+        self.agent = agent
+        self.max_steps = max_steps
+        self.experience_queue = agent.experience_queue
+
+    def run(self):
+        for _ in range(self.max_steps):
+            state, _ = self.agent.env.reset()
+            for _ in range(600):
+                action = self.agent.select_action(state)
+                next_state, reward, done, _ = self.agent.env.step(action)
+                experience = (state, action, reward, next_state, done)
+                self.experience_queue.put(experience)
+                state = next_state
+                if done:
+                    break

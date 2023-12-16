@@ -63,6 +63,7 @@ class SimpleRexyEnv(gym.Env):
 
         self.best_reward_yet = 0
         self.new_best = False
+        self.max_ep_steps = 600
 
     def step(self, action):
         """
@@ -133,7 +134,7 @@ class SimpleRexyEnv(gym.Env):
         reward += self.SURVIVAL_REWARD ** self.current_step
 
         # Timeout penalty
-        if self.current_step >= 600:
+        if self.current_step >= self.max_ep_steps:
             reward += 1000
             print('got to the end!')
             self.done = True
