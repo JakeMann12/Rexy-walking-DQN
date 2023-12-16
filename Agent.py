@@ -57,6 +57,7 @@ class DQNAgent:
         self.num_actions = self.env.action_space.shape[0]
         self.num_states = self.env.observation_space.shape[0]
         self.global_step = 0
+        self.current_step = 0
         self.global_episode = 0 
 
         # Q-Networks
@@ -138,9 +139,6 @@ class DQNAgent:
         self.writer.add_scalar('Loss/Replay', loss.item(), self.global_step) if self.track_tf else None
         self.writer.add_scalar('Q-Value/Average', q_values.mean().item(), self.global_step) if self.track_tf else None
 
-        #decay epsilon- back in the replay
-        self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
-
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
@@ -160,11 +158,12 @@ class DQNAgent:
 
             episode_rewards = []
             for episode in tqdm(range(num_episodes)):
+                self.global_episode += 1
                 state, _ = self.env.reset()
                 total_episode_reward = 0
-
+                
                 while True:
-                    self.global_episode += 1
+                    self.current_step += 1
                     action = self.select_action(state)
                     next_state, reward, done, newbest = self.env.step(action)
                     self.remember(state, action, reward, next_state, done)
@@ -176,11 +175,14 @@ class DQNAgent:
                         self.save_model(model+'BEST')
                     # NOTE: moved Decay epsilon into each step instead of in the replay funct.
                     if done:
+                        self.current_step = 0
                         self.writer.add_scalar('Reward/Episode', total_episode_reward, self.global_episode) if self.track_tf else None
                         break
 
                 #NOTE: put this back in every episode if it takes too long time-wise to learn.
                 self.replay(self.batch_size)
+                #decay epsilon- back next to the replay
+                self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
 
                 # Append episode reward to the list
                 episode_rewards.append(total_episode_reward)

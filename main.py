@@ -16,17 +16,7 @@ def train_rexy(model=None, num_epochs=200, num_episodes=300, save=True, track_tf
 
 if __name__ == "__main__":
     
-    train_rexy(model='juststandup.pth', 
-               num_epochs=1000 , num_episodes=2000, 
-               track_tf = 0,
-               save=True, plot = 0, profile = 0)
+    train_rexy(model='juststandup.pth',
+               num_epochs=50 , num_episodes=100, 
+               track_tf = 0, save=1, plot = 1, profile = 1)
     
-    train_rexy(model='juststandup.pth', 
-               num_epochs=1000 , num_episodes=2000, 
-               track_tf = 0,
-               save=True, plot = 0, profile = 0)
-    
-    train_rexy(model='juststandup.pth', 
-               num_epochs=1000 , num_episodes=2000, 
-               track_tf = 0,
-               save=True, plot = 0, profile = 0)
