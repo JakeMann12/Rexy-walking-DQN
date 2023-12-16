@@ -93,6 +93,6 @@ def run_trained_agent(model_path, num_episodes = 1):
     plot_results(rewards, xy_positions)
 
 if __name__ == "__main__":
-    run_trained_agent(r"juststandupnewreward3.pth")
+    run_trained_agent(r"juststandupBEST.pth")
 
     

@@ -88,7 +88,7 @@ class DQNAgent:
         # Generate a timestamp
         timestamp = datetime.datetime.now().strftime('%m%d-%H%M')
         # Append the timestamp to the log directory name
-        log_dir = os.path.join('runs', log_dir, timestamp)
+        log_dir = os.path.join('TBoard Files', log_dir, timestamp)
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
         writer = SummaryWriter(log_dir)
@@ -169,7 +169,7 @@ class DQNAgent:
                     total_episode_reward += reward
                     state = next_state
 
-                    if newbest == True:
+                    if newbest == True and self.current_step > 100:
                         print('got a new best reward for this run!')
                         self.save_model(model+'BEST')
                     # NOTE: moved Decay epsilon into each step instead of in the replay funct.

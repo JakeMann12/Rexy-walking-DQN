@@ -23,7 +23,7 @@ class SimpleRexyEnv(gym.Env):
     TIPPING_PENALTY = 0  # Penalty for tipping
     HEIGHT_REWARD = 1  # Reward for being at the correct height
     HEIGHT_PENALTY = 0  # Penalty for being outside the height range
-    SURVIVAL_REWARD = 1.1  # Reward for staying alive
+    SURVIVAL_REWARD = 1.025  # Reward for staying alive
     TIMEOUT_PENALTY = 0  # Penalty for reaching the timeout
     X_DIST_REWARD_COEF = 0  # Coefficient for distance reward (de-emphasized)
     X_VEL_REWARD_COEFF = 0  # Coefficient for X-velocity reward (de-emphasized)
