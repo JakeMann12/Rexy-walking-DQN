@@ -38,7 +38,7 @@ class SimpleRexyEnv(gym.Env):
         self.goal = (1.5, 0) #hardcoded for now- moved up from reset
         Goal(self.client, self.goal)
         # Save the initial state
-        self.rexy.apply_action([0]*6)
+        #self.rexy.apply_action([0]*6)
         self.initial_state = p.saveState(physicsClientId=self.client)
         p.setTimeStep(1/30, self.client)
 

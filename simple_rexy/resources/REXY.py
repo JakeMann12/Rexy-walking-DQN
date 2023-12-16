@@ -14,7 +14,7 @@ class Rexy:
         )  # NOTE: added flags in extra from hello_bullet
         self.servo_joints = [2, 4, 6, 10, 12, 14] #hardcoded  
         self.max_force = 1.6671305  # NOTE: Pretty sure is Nm
-        self.max_vel = 2*np.pi/1.14 #NOTE: somehwat assuming rad / sec
+        self.max_vel = 3 * 2*np.pi/1.14 #NOTE: somehwat assuming rad / sec. Tripled to make sure.
 
     def get_ids(self):
         return self.client, self.rexy
