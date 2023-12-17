@@ -61,9 +61,10 @@ class DQNAgent:
         self.last_ep_avg_reward = None
 
         # Q-Networks
+        self.LR = LR #learning rate
         self.q_network = Net(self.num_states, self.num_actions).to(self.device)
         self.target_network = copy.deepcopy(self.q_network).to(self.device)
-        self.optimizer = torch.optim.Adam(self.q_network.parameters(), lr=LR)
+        self.optimizer = torch.optim.Adam(self.q_network.parameters(), lr=self.LR, weight_decay= .01) #adds ridge regression 
         self.loss_fn = nn.MSELoss()
 
         # Experience replay
@@ -208,7 +209,12 @@ class DQNAgent:
                 self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
 
             avg_reward = np.mean(epoch_rewards[epoch, :])
-            print(f"Epoch {epoch+1} completed.\nAfter {episode+1} episodes, Total Avg Reward: {avg_reward:.2f}. Epsilon is {self.epsilon:.3f} ({self.global_step} steps total so far)")
+            print(f"Epoch {epoch+1} completed.\nAfter {episode+1} episodes, Total Avg Reward: {avg_reward:.2f}. Epsilon is {self.epsilon:.3f} ({self.global_step} steps total)")
+
+            if avg_reward > 2e4:
+                print("\n\nAVERAGE REWARD > 20000! Done!\n\n")
+                self.save_model(model)
+                break
 
             if save and (num_epochs < 10 or epoch % (num_epochs // 10) == 0):
                 self.save_model(model)
@@ -224,15 +230,14 @@ class DQNAgent:
             if weights:
                     self.visualize_weights()
             self.plot_rewards(epoch_rewards)
-            self.plot_reward_over_time(loss_per_ep)
+            self.plot_loss_over_time(loss_per_ep)
             
 
         self.writer.close() if self.track_tf else None
 
     def adjust_hypers(self, num_epochs, avg_reward):
-        epoch_eps_decay = .985
-        self.epsilon = max(self.epsilon_min, self.og_epsilon * (epoch_eps_decay ** self.global_epoch))
-        print(f'new epsilon is {self.epsilon:.3f} ({self.og_epsilon} * {epoch_eps_decay}(hardcoded decay) ** {self.global_epoch})')
+        self.epsilon = max(self.epsilon_min, self.og_epsilon * (self.epsilon_decay ** self.global_epoch))
+        print(f'new epsilon is {self.epsilon:.3f} ({self.og_epsilon} * {self.epsilon_decay} ** {self.global_epoch})')
         #if more than a third done, and the reward is between 0 and 5% better
         """if self.global_epoch > (num_epochs // 3) and (1.05 * self.last_ep_avg_reward > avg_reward > self.last_ep_avg_reward):
             print('low rate of increase in reward! reducing learning rate')
@@ -259,6 +264,8 @@ class DQNAgent:
             print(f"Model file '{model_path}' not found.")
 
     def plot_rewards(self, epoch_rewards, subplot_size=(4, 3)):
+        epsilon = self.og_epsilon; epsilon_decay = self.epsilon_decay; learning_rate= self.LR 
+        gamma = self.gamma; memory_capacity = self.memory; batch_size = self.batch_size
         num_epochs = len(epoch_rewards)
         num_epochs_to_display = min(9, num_epochs)
         epochs_to_display = np.linspace(1, num_epochs, num_epochs_to_display, dtype=int)
@@ -267,7 +274,10 @@ class DQNAgent:
         cols = int(np.ceil(num_epochs_to_display / rows))
 
         fig, axs = plt.subplots(rows, cols, figsize=(cols * subplot_size[0], rows * subplot_size[1]))
-        fig.suptitle("Rewards per Epoch")
+        fig.suptitle(f"Rewards per Epoch - ε: {epsilon}, ε Decay: {epsilon_decay}, LR: {learning_rate}, γ: {gamma}, Memory: {memory_capacity}, Batch: {batch_size}")
+
+        if rows * cols == 1:
+            axs = [axs]  # Make axs a list if there's only one subplot
 
         for i, epoch_index in enumerate(epochs_to_display):
             row = i // cols
@@ -275,25 +285,25 @@ class DQNAgent:
             episode_rewards = epoch_rewards[epoch_index - 1]  # Adjust for 0-based indexing
 
             if episode_rewards is not None and len(episode_rewards) > 0:
-                if num_epochs_to_display > 1:
-                    ax = axs[row, col]
-                else:
-                    ax = axs  # When displaying a single plot, axs is not a 2D array
-
-                ax.plot(episode_rewards) if i != 1 else ax.plot(episode_rewards[5:]) #skip very first one
+                ax = axs[row][col] if rows > 1 else axs[col]
+                ax.plot(episode_rewards) if i != 1 else ax.plot(episode_rewards[5:])  # Skip very first one
                 ax.set_title(f"Epoch {epoch_index}")
                 ax.set_xlabel("Episode")
                 ax.set_ylabel("Reward")
             else:
-                axs[row, col].set_title(f"Epoch {epoch_index} (No Data)")
-                axs[row, col].axis('off')
+                if rows > 1:
+                    axs[row][col].set_title(f"Epoch {epoch_index} (No Data)")
+                    axs[row][col].axis('off')
+                else:
+                    axs[col].set_title(f"Epoch {epoch_index} (No Data)")
+                    axs[col].axis('off')
 
         plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-        
-        # Show the plot and block the code until the user closes the plot window
         plt.show(block=False)
 
-    def plot_reward_over_time(self, loss_per_ep, smoothing_coefficient=0.9):
+
+
+    def plot_loss_over_time(self, loss_per_ep, smoothing_coefficient=0.8):
         smoothed_loss = np.zeros_like(loss_per_ep)
         for i in range(loss_per_ep.shape[0]):
             smoothed_loss[i, 0] = loss_per_ep[i, 0]
@@ -305,10 +315,13 @@ class DQNAgent:
         
         # Plot the unsmoothed data in a lighter shade
         plt.plot(episode_numbers, loss_per_ep.flatten(), alpha=0.3, label="Unsmoothed Loss per Episode", color='gray')
-        
-        # Plot the smoothed data
         plt.plot(episode_numbers, smoothed_loss.flatten(), label="Smoothed Loss per Episode")
-        
+
+        # Focus the y-axis on the smoothed data
+        min_smoothed_loss = np.nanmin(smoothed_loss)
+        max_smoothed_loss = np.nanmax(smoothed_loss)
+        plt.ylim(min_smoothed_loss, max_smoothed_loss)
+
         plt.title(f"Smoothed Loss per Episode Over Time (Smoothing: {smoothing_coefficient})")
         plt.xlabel("Episode")
         plt.ylabel("Loss")
@@ -373,24 +386,3 @@ class DQNAgent:
             self.initial_fc3_weights = self.q_network.fc3.weight.data.cpu().numpy()
             self.after_training = True
     
-from threading import Thread
-import queue
-
-class EnvironmentThread(Thread):
-    def __init__(self, agent, max_steps):
-        Thread.__init__(self)
-        self.agent = agent
-        self.max_steps = max_steps
-        self.experience_queue = agent.experience_queue
-
-    def run(self):
-        for _ in range(self.max_steps):
-            state, _ = self.agent.env.reset()
-            for _ in range(600):
-                action = self.agent.select_action(state)
-                next_state, reward, done, _ = self.agent.env.step(action)
-                experience = (state, action, reward, next_state, done)
-                self.experience_queue.put(experience)
-                state = next_state
-                if done:
-                    break

@@ -19,3 +19,10 @@ print(format(7, '06b'))
 print(format(8, '06b'))
 print(format(63, '06b'))
 print(format(64, '06b'))
+
+reward = 0
+for i in range(150):
+    reward += 1.05 ** i 
+    reward += 5
+
+print(reward)
