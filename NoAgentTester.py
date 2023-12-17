@@ -84,7 +84,8 @@ def run_trained_agent(model_path, num_episodes = 10):
 
         while True:
             action = agent.select_action(state)
-            next_state, reward, done, _ = agent.env.step(action)
+            jvals = state[8:14]
+            next_state, reward, done, _ = agent.env.step(jvals, action)
             #print(next_state[-6:])
             ep_reward += reward
             ep_rewards.append(ep_reward)
@@ -102,6 +103,6 @@ def run_trained_agent(model_path, num_episodes = 10):
     plot_results(best_rewards, best_xy_positions, best_episode)
 
 if __name__ == "__main__":
-    run_trained_agent(r"juststandup.pth")
+    run_trained_agent(r"juststandupBEST.pth")
 
     

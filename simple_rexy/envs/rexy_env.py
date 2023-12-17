@@ -44,8 +44,8 @@ class SimpleRexyEnv(gym.Env):
 
         num_joints = len(self.rexy.servo_joints)
         self.action_space = gym.spaces.box.Box(
-            low = np.float32(-.25*pi*np.ones_like(self.rexy.servo_joints)), # < -.4 * 180 degrees for all - prob overkill still
-            high = np.float32(.25*pi*np.ones_like(self.rexy.servo_joints)))
+            low = np.float32(-.2*pi*np.ones_like(self.rexy.servo_joints)), # < -.4 * 180 degrees for all - prob overkill still
+            high = np.float32(.2*pi*np.ones_like(self.rexy.servo_joints)))
         self.observation_space = gym.spaces.Box(
             low=np.float32(np.array([-5, -5, 0, -pi, -pi/2, -pi, -1, -1] + [-.25*pi]*num_joints + [-self.rexy.max_vel] * num_joints)),
             high=np.float32(np.array([5, 5, .4, pi, pi/2, pi, 5, 5] + [.25*pi]*num_joints + [self.rexy.max_vel] * num_joints))
@@ -65,7 +65,7 @@ class SimpleRexyEnv(gym.Env):
         self.new_best = False
         self.max_ep_steps = 600
 
-    def step(self, action):
+    def step(self, jvals, action):
         """
         Takes 6-D array input, calls reward function and returns
         values for observation, reward, and 
@@ -76,7 +76,7 @@ class SimpleRexyEnv(gym.Env):
 
         # Feed action to the rexy and get observation of rexy's state
         print("Before apply_action") if self.DEBUG_MODE else None
-        self.rexy.apply_action(action)
+        self.rexy.apply_action(jvals, action)
         print("After apply_action") if self.DEBUG_MODE else None
         p.stepSimulation()
         print("After stepSimulation") if self.DEBUG_MODE else None
@@ -140,7 +140,7 @@ class SimpleRexyEnv(gym.Env):
             self.done = True
 
         #save if we broke a record (exclude weird fringe at start)
-        if reward > 1.15 * self.best_reward_yet and self.current_step > 100: #new best must be 15% better
+        if reward > (1.15 * self.best_reward_yet) and self.current_step > 100: #new best must be 15% better
             self.new_best = True
             print('New High Score!')
             self.best_reward_yet = reward
@@ -167,7 +167,6 @@ class SimpleRexyEnv(gym.Env):
         print(f"Prev dist to goal: {self.prev_dist_to_goal:.3f}") if self.DEBUG_MODE else None
 
         info = {}
-        
 
         print(f"Observation (get_obs): {rexy_ob}") if self.DEBUG_MODE else None
         print(f"Info: {info}") if self.DEBUG_MODE else None

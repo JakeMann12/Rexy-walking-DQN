@@ -52,7 +52,7 @@ class DQNAgent:
         # ESTABLISH REXY ENV
         self.client = client
         self.env = gym.make(env, client = self.client).unwrapped
-        self.num_actions = self.env.action_space.shape[0]
+        self.num_actions = 2^6 #discretized
         self.num_states = self.env.observation_space.shape[0]
         self.global_step = 0
         self.episode_step = 0
@@ -103,19 +103,17 @@ class DQNAgent:
 
     def select_action(self, state):
         """
-        Chooses action based on epsilon-greedy method, and increments global_step
-        Note- attempt at stabilization with input of zeros to start
+        Chooses action based on epsilon-greedy method.
+        Note - Encourages exploration to start
         """
-        if self.episode_step == 1:
-            action = [0]*6
-        elif np.random.rand() <= self.epsilon:
-            action = self.env.action_space.sample()  # RANDOM ACTION
+        if self.episode_step == 1 or np.random.rand() <= self.epsilon:
+            action = random.randint(0, 63)  # RANDOM Number
         else:
             with torch.no_grad():
                 state = torch.FloatTensor(state).to(self.device)
-                q_values = self.q_network(state)
-                action = q_values.cpu().numpy()
-        self.global_step += 1
+                q_values = self.q_network(state.unsqueeze(0))  # Add batch dimension
+                max_q_index = torch.argmax(q_values).item()  # Get the index of the max Q-value
+                action = max_q_index
         return action
 
     def remember(self, state, action, reward, next_state, done):
@@ -182,15 +180,17 @@ class DQNAgent:
                 total_episode_reward = 0
 
                 while True:
+                    self.global_step += 1
                     self.episode_step += 1
                     action = self.select_action(state)
-                    next_state, reward, done, newbest = self.env.step(action)
+                    jvals = state[8:14] #hardcoded- joint vals
+                    next_state, reward, done, newbest = self.env.step(jvals, action)
                     self.remember(state, action, reward, next_state, done)
                     total_episode_reward += reward
                     state = next_state
 
                     if newbest == True and self.episode_step > 100:
-                        print('got a new best reward for this run!')
+                        print(f'got a new best reward for this run! {total_episode_reward:.3f}')
                         self.save_model(model[:-4]+'BEST'+'.pth')
 
                     if done:
