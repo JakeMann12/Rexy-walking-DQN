@@ -55,8 +55,10 @@ class DQNAgent:
         self.num_actions = self.env.action_space.shape[0]
         self.num_states = self.env.observation_space.shape[0]
         self.global_step = 0
-        self.current_step = 0
+        self.episode_step = 0
         self.global_episode = 0 
+        self.global_epoch = 0
+        self.last_ep_avg_reward = None
 
         # Q-Networks
         self.q_network = Net(self.num_states, self.num_actions).to(self.device)
@@ -73,7 +75,8 @@ class DQNAgent:
         self.q_network_iteration = Q_NETWORK_ITERATION
 
         # Epsilon-greedy strategy
-        self.epsilon = EPSILON
+        self.og_epsilon = EPSILON #static
+        self.epsilon = EPSILON #changes
         self.epsilon_decay = EPSILON_DECAY
         self.epsilon_min = EPSILON_MIN
 
@@ -101,8 +104,11 @@ class DQNAgent:
     def select_action(self, state):
         """
         Chooses action based on epsilon-greedy method, and increments global_step
+        Note- attempt at stabilization with input of zeros to start
         """
-        if np.random.rand() <= self.epsilon:
+        if self.episode_step == 1:
+            action = [0]*6
+        elif np.random.rand() <= self.epsilon:
             action = self.env.action_space.sample()  # RANDOM ACTION
         else:
             with torch.no_grad():
@@ -135,7 +141,7 @@ class DQNAgent:
 
         with autocast():
             q_values = self.q_network(states)
-            target_q_values = self.target_network(next_states).detach()
+            target_q_values = self.target_network(next_states).detach() #detach prevents gradient flow
             target = rewards + self.gamma * (1 - dones) * target_q_values.max(dim=1)[0]
             target = target.unsqueeze(1).expand_as(q_values)
             loss = self.loss_fn(q_values, target)
@@ -169,25 +175,26 @@ class DQNAgent:
         loss_per_ep = np.zeros((num_epochs, num_episodes)) #loss per episode
 
         for epoch in range(num_epochs):
+            self.global_epoch += 1
             for episode in tqdm(range(num_episodes)):
                 self.global_episode += 1
                 state, _ = self.env.reset()
                 total_episode_reward = 0
 
                 while True:
-                    self.current_step += 1
+                    self.episode_step += 1
                     action = self.select_action(state)
                     next_state, reward, done, newbest = self.env.step(action)
                     self.remember(state, action, reward, next_state, done)
                     total_episode_reward += reward
                     state = next_state
 
-                    if newbest == True and self.current_step > 100:
+                    if newbest == True and self.episode_step > 100:
                         print('got a new best reward for this run!')
                         self.save_model(model[:-4]+'BEST'+'.pth')
 
                     if done:
-                        self.current_step = 0
+                        self.episode_step = 0
                         self.writer.add_scalar('Reward/Episode', total_episode_reward, self.global_episode) if self.track_tf else None
                         break
 
@@ -197,16 +204,16 @@ class DQNAgent:
                 # Decay epsilon here, post-episode
                 loss = self.replay(self.batch_size)
                 loss_per_ep[epoch, episode] = loss
+
                 self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
 
-                if episode == num_episodes - 1:
-                    avg_reward = np.mean(epoch_rewards[epoch, :])
-                    print(f"After {episode+1} episodes, Total Avg Reward: {avg_reward:.2f}")
-
-            print(f"Epoch {epoch + 1} Completed")
+            avg_reward = np.mean(epoch_rewards[epoch, :])
+            print(f"Epoch {epoch+1} completed.\nAfter {episode+1} episodes, Total Avg Reward: {avg_reward:.2f}. Epsilon is {self.epsilon:.3f} ({self.global_step} steps total so far)")
 
             if save and (num_epochs < 10 or epoch % (num_epochs // 10) == 0):
                 self.save_model(model)
+
+            self.adjust_hypers(num_epochs, avg_reward)
                 
         if profile:
             profiler.disable()
@@ -222,6 +229,15 @@ class DQNAgent:
 
         self.writer.close() if self.track_tf else None
 
+    def adjust_hypers(self, num_epochs, avg_reward):
+        epoch_eps_decay = .985
+        self.epsilon = max(self.epsilon_min, self.og_epsilon * (epoch_eps_decay ** self.global_epoch))
+        print(f'new epsilon is {self.epsilon:.3f} ({self.og_epsilon} * {epoch_eps_decay}(hardcoded decay) ** {self.global_epoch})')
+        #if more than a third done, and the reward is between 0 and 5% better
+        """if self.global_epoch > (num_epochs // 3) and (1.05 * self.last_ep_avg_reward > avg_reward > self.last_ep_avg_reward):
+            print('low rate of increase in reward! reducing learning rate')
+            self.learn"""
+        self.last_ep_avg_reward = avg_reward
 
     def save_model(self, model_path="dqn_model.pth"):
         model_path = os.path.join('.pth Files', model_path)

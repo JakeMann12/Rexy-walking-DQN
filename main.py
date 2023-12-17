@@ -5,7 +5,7 @@ def train_rexy(model=None, num_epochs=200, num_episodes=300, save=True, track_tf
 
     # Initialize DQNAgent
     agent = DQNAgent('rexy-v0', p.connect(p.DIRECT), track_tf = track_tf, BATCH_SIZE=256, LR=0.001, GAMMA=0.95,
-                     EPSILON=1.0, EPSILON_DECAY=0.995, EPSILON_MIN=0.05, MEMORY_CAPACITY=3000,
+                     EPSILON=0.0, EPSILON_DECAY=0.9995, EPSILON_MIN=0.1, MEMORY_CAPACITY=3000,
                      Q_NETWORK_ITERATION=100)
     agent.load_model(model)
 
@@ -16,7 +16,7 @@ def train_rexy(model=None, num_epochs=200, num_episodes=300, save=True, track_tf
 
 if __name__ == "__main__":
     
-    train_rexy(model='juststandupsimplernetwork.pth',
-               num_epochs=5, num_episodes=1000, 
+    train_rexy(model='juststandup.pth',
+               num_epochs=1000, num_episodes=1000, 
                track_tf = 0, save=1, plot = 1, profile = 0, 
                weights = True)

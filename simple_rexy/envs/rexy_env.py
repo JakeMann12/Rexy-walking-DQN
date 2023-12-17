@@ -72,6 +72,7 @@ class SimpleRexyEnv(gym.Env):
         """
         print("=====  STEPTIME  =====\n") if self.DEBUG_MODE else None
         p.configureDebugVisualizer(p.COV_ENABLE_SINGLE_STEP_RENDERING)
+        self.current_step += 1  # Increment the current step at each call to step()
 
         # Feed action to the rexy and get observation of rexy's state
         print("Before apply_action") if self.DEBUG_MODE else None
@@ -85,7 +86,6 @@ class SimpleRexyEnv(gym.Env):
         reward, newbest = self.compute_reward(rexy_ob) 
         done = self.done
         
-        self.current_step += 1  # Increment the current step at each call to step()
         return ob, reward, done, newbest
 
     def compute_reward(self, rexy_ob):
@@ -123,8 +123,8 @@ class SimpleRexyEnv(gym.Env):
             self.done = True
 
         # Rewards/punishes based on Z height
-        z_height = rexy_ob[2]
-        if .145 < z_height <= .325:
+        height_diff = rexy_ob[2] - self.first_obs[2]
+        if abs(height_diff) < .125:
             reward += self.HEIGHT_REWARD
         else:
             reward += self.HEIGHT_PENALTY
@@ -140,7 +140,7 @@ class SimpleRexyEnv(gym.Env):
             self.done = True
 
         #save if we broke a record (exclude weird fringe at start)
-        if reward > self.best_reward_yet and self.current_step > 100:
+        if reward > 1.15 * self.best_reward_yet and self.current_step > 100: #new best must be 15% better
             self.new_best = True
             print('New High Score!')
             self.best_reward_yet = reward

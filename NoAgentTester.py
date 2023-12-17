@@ -10,7 +10,7 @@ import numpy as np
 from Agent import DQNAgent
 # zswang666 and electricelephant
 
-def plot_results(rewards, xy_positions):
+def plot_results(rewards, xy_positions, episode):
     # Plot the reward function
     plt.figure(figsize=(14, 5))
 
@@ -53,11 +53,11 @@ def plot_results(rewards, xy_positions):
     )
     plt.xlabel("X Position")
     plt.ylabel("Y Position")
-    plt.title("Path of Rexy Over Time")
+    plt.title(f"Best Run - Reward and Path of Rexy Over Time (Ep. {episode})")
     plt.legend()
     plt.show()
 
-def run_trained_agent(model_path, num_episodes = 1):
+def run_trained_agent(model_path, num_episodes = 10):
     # Initialize DQNAgent
     agent = DQNAgent('rexy-v0', p.connect(p.GUI), BATCH_SIZE=128, LR=0.01, GAMMA=0.90,
                      EPSILON=0.0,  # Set epsilon to 0 for a deterministic policy
@@ -70,29 +70,38 @@ def run_trained_agent(model_path, num_episodes = 1):
     agent.load_model(model_path)
 
     # Run the trained agent without training
-    xy_positions = []
-    rewards = []
+    best_reward = 0
+    best_rewards = []
+    best_xy_positions = []
+    best_episode = None
 
-    state, _ = agent.env.reset()
-    
-    while True:
-        action = agent.select_action(state)
-        #action = [0]*6 
-        next_state, reward, done, _ = agent.env.step(action)
-        print(next_state[-6:])
-        rewards.append(reward)
-        xy_positions.append((next_state[0].item(), next_state[1].item()))
-        
-        state = next_state
+    for episode in range(1,num_episodes+1): #ten episodes
 
-        if done:
-            #pass
-            break
+        state, _ = agent.env.reset()
+        ep_reward = 0
+        ep_rewards = []
+        ep_xy_positions = []
 
+        while True:
+            action = agent.select_action(state)
+            next_state, reward, done, _ = agent.env.step(action)
+            #print(next_state[-6:])
+            ep_reward += reward
+            ep_rewards.append(ep_reward)
+            ep_xy_positions.append((next_state[0].item(), next_state[1].item()))
+            state = next_state
+
+            if done:
+                if ep_reward > best_reward:
+                    best_rewards = ep_rewards
+                    best_xy_positions = ep_xy_positions
+                    best_episode = episode
+                break
+    p.disconnect()
     # Plot the results
-    plot_results(rewards, xy_positions)
+    plot_results(best_rewards, best_xy_positions, best_episode)
 
 if __name__ == "__main__":
-    run_trained_agent(r"juststandupsimplernetwork")
+    run_trained_agent(r"juststandup.pth")
 
     
