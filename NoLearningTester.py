@@ -57,14 +57,14 @@ def plot_results(rewards, xy_positions, episode):
     plt.legend()
     plt.show()
 
-def run_trained_agent(model_path, num_episodes = 100):
+def run_trained_agent(model_path, K = 2, num_episodes = 100):
     # Initialize DQNAgent
-    agent = DQNAgent('rexy-v0', p.connect(p.GUI), BATCH_SIZE=128, LR=0.01, GAMMA=0.90,
+    agent = DQNAgent('rexy-v0', p.connect(p.GUI), K = K, BATCH_SIZE=32, LR=0.01, GAMMA=0.90,
                      EPSILON=0.0,  # Set epsilon to 0 for a deterministic policy
                      EPSILON_DECAY=1.0,  # No epsilon decay during the run
                      EPSILON_MIN=0.0,  # Minimum epsilon during the run
-                     MEMORY_CAPACITY=2000,
-                     Q_NETWORK_ITERATION=100)
+                     MEMORY_CAPACITY=1000000,
+                     Q_NETWORK_ITERATION=50)
 
     # Load the trained model
     agent.load_model(model_path)
@@ -103,6 +103,6 @@ def run_trained_agent(model_path, num_episodes = 100):
     plot_results(best_rewards, best_xy_positions, best_episode)
 
 if __name__ == "__main__":
-    run_trained_agent(r"juststandup2BEST.pth")
+    run_trained_agent(r"juststandup4.pth", K = 3, num_episodes = 100)
 
     

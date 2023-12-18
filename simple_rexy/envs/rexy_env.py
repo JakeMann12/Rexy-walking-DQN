@@ -29,7 +29,7 @@ class SimpleRexyEnv(gym.Env):
     X_VEL_REWARD_COEFF = 0  # Coefficient for X-velocity reward (de-emphasized)
     REACH_GOAL_REWARD = 0  # Reward for reaching the goal (de-emphasized)
     
-    def __init__(self, client):
+    def __init__(self, client, K):
         self._self_collision_enabled = True
     
         self.client = client 
@@ -65,6 +65,9 @@ class SimpleRexyEnv(gym.Env):
         self.new_best = False
         self.max_ep_steps = 150
 
+        #SKIP FRAMES FOR GPU
+        self.K = K
+
     def step(self, jvals, action):
         """
         Takes 6-D array input, calls reward function and returns
@@ -74,11 +77,15 @@ class SimpleRexyEnv(gym.Env):
         p.configureDebugVisualizer(p.COV_ENABLE_SINGLE_STEP_RENDERING)
         self.current_step += 1  # Increment the current step at each call to step()
 
-        # Feed action to the rexy and get observation of rexy's state
-        print("Before apply_action") if self.DEBUG_MODE else None
-        self.rexy.apply_action(jvals, action)
-        print("After apply_action") if self.DEBUG_MODE else None
-        p.stepSimulation()
+        # Feed action to the rexy and get observation of rexy's state - skip this many frames
+        for frame in range(1,self.K+1):
+            if frame == 1:
+                self.rexy.apply_action(jvals, action)
+            else:
+                added_jval = [x * (frame - 1) for x in self.rexy.index_to_action(action)]
+                self.rexy.apply_action(jvals + added_jval, action)
+            p.stepSimulation()
+
         print("After stepSimulation") if self.DEBUG_MODE else None
         rexy_ob = self.rexy.get_observation()
 

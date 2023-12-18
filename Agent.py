@@ -21,11 +21,11 @@ from torch.cuda.amp import autocast, GradScaler
 class Net(nn.Module):
     def __init__(self, num_states, num_actions):
         super(Net, self).__init__()
-        self.fc1 = nn.Linear(num_states, 128)
+        self.fc1 = nn.Linear(num_states, 256)
         self.relu1 = nn.ReLU()
-        self.fc2 = nn.Linear(128, 64)
+        self.fc2 = nn.Linear(256, 128)
         self.relu2 = nn.ReLU()
-        self.fc3 = nn.Linear(64, num_actions)
+        self.fc3 = nn.Linear(128, num_actions)
 
     def forward(self, x):
         x = self.fc1(x)
@@ -37,7 +37,7 @@ class Net(nn.Module):
 
 # Define the DQN agent
 class DQNAgent:
-    def __init__(self, env, client, track_tf = False, BATCH_SIZE=128, LR=0.01, GAMMA=0.90, 
+    def __init__(self, env, client, K, track_tf = False, BATCH_SIZE=128, LR=0.01, GAMMA=0.90, 
                  EPSILON=0.9, EPSILON_DECAY=0.995, EPSILON_MIN=0.01, MEMORY_CAPACITY=2000, 
                  Q_NETWORK_ITERATION=100):
         
@@ -51,7 +51,8 @@ class DQNAgent:
 
         # ESTABLISH REXY ENV
         self.client = client
-        self.env = gym.make(env, client = self.client).unwrapped
+        self.K = K
+        self.env = gym.make(env, client = self.client, K = self.K).unwrapped
         self.num_actions = 2^6 #discretized
         self.num_states = self.env.observation_space.shape[0]
         self.global_step = 0
@@ -68,7 +69,8 @@ class DQNAgent:
         self.loss_fn = nn.MSELoss()
 
         # Experience replay
-        self.memory = deque(maxlen=MEMORY_CAPACITY)#.to(self.device)
+        self.MEMORY_CAPACITY = MEMORY_CAPACITY
+        self.memory = deque(maxlen = self.MEMORY_CAPACITY)#.to(self.device)
 
         # Batch, Gamma
         self.batch_size = BATCH_SIZE
@@ -80,6 +82,7 @@ class DQNAgent:
         self.epsilon = EPSILON #changes
         self.epsilon_decay = EPSILON_DECAY
         self.epsilon_min = EPSILON_MIN
+        self.num_decay_episodes = 50000 # over the first 50000 episodes it goes to epsilon_min
 
         # Counter for Q-network updates
         self.update_counter = 0
@@ -91,6 +94,9 @@ class DQNAgent:
         
         #AMP COMPONENTS
         self.scaler = GradScaler()
+
+        #Model- for directory for saving
+        self.model = None
         
     def make_writer(self, log_dir):
         # Generate a timestamp
@@ -119,7 +125,7 @@ class DQNAgent:
 
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
-
+    #%% replay
     def replay(self, batch_size):
         if len(self.memory) < batch_size:
             return
@@ -160,18 +166,21 @@ class DQNAgent:
             self.writer.add_scalar('Q-Value/Average', q_values.mean().item(), self.global_step)
 
         return loss
-
+    #%% training
     def train(self, model = None, num_epochs=200, num_episodes=300, save=True, profile=False, plot=False, weights = False):
+        self.model = model
+
         if profile:
             profiler = cProfile.Profile()
             profiler.enable()
 
         if weights and save:
-            self.visualize_weights()
+            self.visualize_weights(save = save)
 
         # Initialize a NumPy array for storing rewards
         epoch_rewards = np.zeros((num_epochs, num_episodes))
         loss_per_ep = np.zeros((num_epochs, num_episodes)) #loss per episode
+        epsilon_vals = np.zeros((num_epochs, num_episodes))
 
         for epoch in range(num_epochs):
             self.global_epoch += 1
@@ -199,19 +208,22 @@ class DQNAgent:
                         self.writer.add_scalar('Reward/Episode', total_episode_reward, self.global_episode) if self.track_tf else None
                         break
 
+                # Calculate the decay factor
+                decay_factor = (self.og_epsilon - self.epsilon_min) / self.num_decay_episodes
+                self.epsilon = max(self.epsilon_min, self.epsilon - decay_factor)
+                
                 # Store the episode reward in the NumPy array
                 epoch_rewards[epoch, episode] = total_episode_reward
 
                 # Decay epsilon here, post-episode
                 loss = self.replay(self.batch_size)
                 loss_per_ep[epoch, episode] = loss
-
-                self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
+                epsilon_vals[epoch,episode] = self.epsilon * 100 #SCALING FOR GRAPH
 
             avg_reward = np.mean(epoch_rewards[epoch, :])
             print(f"Epoch {epoch+1} completed.\nAfter {episode+1} episodes, Total Avg Reward: {avg_reward:.2f}. Epsilon is {self.epsilon:.3f} ({self.global_step} steps total)")
 
-            if avg_reward > 2e4:
+            if avg_reward > 20000:
                 print("\n\nAVERAGE REWARD > 20000! Done!\n\n")
                 self.save_model(model)
                 break
@@ -219,7 +231,7 @@ class DQNAgent:
             if save and (num_epochs < 10 or epoch % (num_epochs // 10) == 0):
                 self.save_model(model)
 
-            self.adjust_hypers(num_epochs, avg_reward)
+            #self.adjust_hypers(num_epochs, avg_reward) # novel method for epsilon decay?
                 
         if profile:
             profiler.disable()
@@ -227,17 +239,19 @@ class DQNAgent:
             profiler.dump_stats(new_prof_filepath)
 
         if plot:
+            print('finna plot')
             if weights:
-                    self.visualize_weights()
-            self.plot_rewards(epoch_rewards)
-            self.plot_loss_over_time(loss_per_ep)
-            
-
+                    self.visualize_weights(save = save)
+            self.plot_rewards(epoch_rewards, save = save)
+            self.plot_rewards_and_epsilon(epoch_rewards, epsilon_vals, save = save)
+            self.plot_loss_over_time(loss_per_ep, save = save) #removes NaNs
+            input('Press enter to close the graphs.')
         self.writer.close() if self.track_tf else None
 
+    #%% Helper Functions
     def adjust_hypers(self, num_epochs, avg_reward):
-        self.epsilon = max(self.epsilon_min, self.og_epsilon * (self.epsilon_decay ** self.global_epoch))
-        print(f'new epsilon is {self.epsilon:.3f} ({self.og_epsilon} * {self.epsilon_decay} ** {self.global_epoch})')
+        self.epsilon = max(self.epsilon_min, self.og_epsilon * (self.epsilon_decay ** (4*self.global_epoch)))
+        print(f'new epsilon is {self.epsilon:.3f} ({self.og_epsilon} * {self.epsilon_decay} ** (4*{self.global_epoch}))')
         #if more than a third done, and the reward is between 0 and 5% better
         """if self.global_epoch > (num_epochs // 3) and (1.05 * self.last_ep_avg_reward > avg_reward > self.last_ep_avg_reward):
             print('low rate of increase in reward! reducing learning rate')
@@ -263,9 +277,9 @@ class DQNAgent:
         else:
             print(f"Model file '{model_path}' not found.")
 
-    def plot_rewards(self, epoch_rewards, subplot_size=(4, 3)):
+    def plot_rewards(self, epoch_rewards, save, subplot_size=(4, 3)):
         epsilon = self.og_epsilon; epsilon_decay = self.epsilon_decay; learning_rate= self.LR 
-        gamma = self.gamma; memory_capacity = self.memory; batch_size = self.batch_size
+        gamma = self.gamma; memory_capacity = self.MEMORY_CAPACITY; batch_size = self.batch_size ; K = self.K
         num_epochs = len(epoch_rewards)
         num_epochs_to_display = min(9, num_epochs)
         epochs_to_display = np.linspace(1, num_epochs, num_epochs_to_display, dtype=int)
@@ -274,7 +288,7 @@ class DQNAgent:
         cols = int(np.ceil(num_epochs_to_display / rows))
 
         fig, axs = plt.subplots(rows, cols, figsize=(cols * subplot_size[0], rows * subplot_size[1]))
-        fig.suptitle(f"Rewards per Epoch - ε: {epsilon}, ε Decay: {epsilon_decay}, LR: {learning_rate}, γ: {gamma}, Memory: {memory_capacity}, Batch: {batch_size}")
+        fig.suptitle(f"Rewards per Epoch - ε: {epsilon}, ε Decay: {epsilon_decay}, LR: {learning_rate}, γ: {gamma}, Memory: {memory_capacity}, Batch: {batch_size}, K: {K}")
 
         if rows * cols == 1:
             axs = [axs]  # Make axs a list if there's only one subplot
@@ -300,35 +314,134 @@ class DQNAgent:
 
         plt.tight_layout(rect=[0, 0.03, 1, 0.95])
         plt.show(block=False)
+        if save:
+            results_dir = self.make_results_dir()
+            plot_filename = os.path.join(results_dir, 'selected_epoch_rewards.png')
+            plt.savefig(plot_filename)
+            print(f"Plot saved to {plot_filename}")
 
 
+    def plot_rewards_and_epsilon(self, epoch_rewards, epsilon_vals, save):
+        num_epochs, num_episodes = epoch_rewards.shape
 
-    def plot_loss_over_time(self, loss_per_ep, smoothing_coefficient=0.8):
-        smoothed_loss = np.zeros_like(loss_per_ep)
+        # Calculate the average rewards over time
+        average_rewards = np.mean(epoch_rewards, axis=0)
+
+        # Create a figure and plot the average rewards
+        fig, ax1 = plt.subplots(figsize=(10, 6))
+        ax1.set_xlabel("Episode")
+        ax1.set_ylabel("Average Rewards", color='blue')
+        ax1.plot(np.arange(1, num_episodes + 1), average_rewards, color='blue', label="Average Rewards")
+        ax1.tick_params(axis='y', labelcolor='blue')
+        ax1.legend(loc="upper left")
+
+        # Create a secondary y-axis for epsilon values on the right side
+        ax2 = ax1.twinx()
+        ax2.set_ylabel("Epsilon", color='red')
+
+        # Overlay the epsilon values in red
+        ax2.plot(np.arange(1, num_episodes + 1), epsilon_vals[0, :], color='red', linestyle='--', label="Epsilon")
+
+        ax2.tick_params(axis='y', labelcolor='red')
+        ax2.legend(loc="upper right")
+
+        plt.title("Average Rewards and Epsilon Over Time")
+        plt.grid(True)
+        plt.show(block=False)
+        if save:
+            results_dir = self.make_results_dir()
+            plot_filename = os.path.join(results_dir, 'AllRewardsandEpsilon.png')
+            plt.savefig(plot_filename)
+            print(f"Plot saved to {plot_filename}")
+
+    def plot_loss_over_time(self, loss_per_ep, save, smoothing_coefficient=0.8):
+        plt.figure(figsize=(8, 6))
+        # Flatten the loss_per_ep array to get a 1D array for x-axis
+        episode_numbers = np.arange(1, loss_per_ep.size + 1)
+        # Plot the unsmoothed data in a lighter shade
+        plt.plot(episode_numbers, loss_per_ep.flatten(), alpha=0.3, label="Unsmoothed Loss per Episode", color='gray')
+        # Calculate smoothed loss
+        smoothed_loss = np.zeros_like(loss_per_ep, dtype=float)
         for i in range(loss_per_ep.shape[0]):
             smoothed_loss[i, 0] = loss_per_ep[i, 0]
             for j in range(1, loss_per_ep.shape[1]):
                 smoothed_loss[i, j] = smoothing_coefficient * smoothed_loss[i, j - 1] + (1 - smoothing_coefficient) * loss_per_ep[i, j]
-
-        plt.figure(figsize=(8, 6))
-        episode_numbers = np.arange(1, smoothed_loss.size + 1)
+        # Flatten the smoothed_loss array for y-axis focusing
+        smoothed_loss_flat = smoothed_loss.flatten()
         
-        # Plot the unsmoothed data in a lighter shade
-        plt.plot(episode_numbers, loss_per_ep.flatten(), alpha=0.3, label="Unsmoothed Loss per Episode", color='gray')
-        plt.plot(episode_numbers, smoothed_loss.flatten(), label="Smoothed Loss per Episode")
-
         # Focus the y-axis on the smoothed data
-        min_smoothed_loss = np.nanmin(smoothed_loss)
-        max_smoothed_loss = np.nanmax(smoothed_loss)
+        min_smoothed_loss = np.nanmin(smoothed_loss_flat) 
+        max_smoothed_loss = np.nanmax(smoothed_loss_flat) 
         plt.ylim(min_smoothed_loss, max_smoothed_loss)
-
+        
+        # Plot the smoothed loss
+        plt.plot(episode_numbers, smoothed_loss_flat, label="Smoothed Loss per Episode")
+        
         plt.title(f"Smoothed Loss per Episode Over Time (Smoothing: {smoothing_coefficient})")
         plt.xlabel("Episode")
         plt.ylabel("Loss")
         plt.legend()
         plt.grid(True)
-        plt.show()
+        plt.show(block = False)
+        if save:
+            results_dir = self.make_results_dir()
+            plot_filename = os.path.join(results_dir, 'AllLoss.png')
+            plt.savefig(plot_filename)
+            print(f"Plot saved to {plot_filename}")
+    
+    def visualize_weights(self, save):
+        if self.after_training:
+            # Get the weights of the Q-network's layers after training
+            fc1_weights = self.q_network.fc1.weight.data.cpu().numpy()
+            fc2_weights = self.q_network.fc2.weight.data.cpu().numpy()
+            fc3_weights = self.q_network.fc3.weight.data.cpu().numpy()
+            
+            # Calculate the change in weights
+            fc1_weights_diff = fc1_weights - self.initial_fc1_weights
+            fc2_weights_diff = fc2_weights - self.initial_fc2_weights
+            fc3_weights_diff = fc3_weights - self.initial_fc3_weights
 
+            # Plot the change in weights for each layer
+            fig, axs = plt.subplots(1, 3, figsize=(12, 6))
+
+            im0 = axs[0].imshow(fc1_weights_diff, cmap='coolwarm', aspect='auto')
+            axs[0].set_title('FC1 Weight Change')
+            
+            im1 = axs[1].imshow(fc2_weights_diff, cmap='coolwarm', aspect='auto')
+            axs[1].set_title('FC2 Weight Change')
+            
+            im2 = axs[2].imshow(fc3_weights_diff, cmap='coolwarm', aspect='auto')
+            axs[2].set_title('FC3 Weight Change')
+
+            # Add a legend
+            fig.colorbar(im0, ax=axs[0], label='Change')
+            fig.colorbar(im1, ax=axs[1], label='Change')
+            fig.colorbar(im2, ax=axs[2], label='Change')
+
+            plt.tight_layout()  # Adjust layout to fit better
+            plt.show(block = False)
+            if save:
+                results_dir = self.make_results_dir()
+                plot_filename = os.path.join(results_dir, 'Weights.png')
+                plt.savefig(plot_filename)
+                print(f"Plot saved to {plot_filename}")
+        else:
+            # Log the weights before training
+            self.initial_fc1_weights = self.q_network.fc1.weight.data.cpu().numpy()
+            self.initial_fc2_weights = self.q_network.fc2.weight.data.cpu().numpy()
+            self.initial_fc3_weights = self.q_network.fc3.weight.data.cpu().numpy()
+            self.after_training = True
+        
+    def make_results_dir(self):
+        # Create a shorter title with key parameters and NN layer sizes
+        dir_name = f"{self.model}_20-256-128-6nn_eps{self.og_epsilon}_dec{self.epsilon_decay}_LR{self.LR}_g{self.gamma}_mem{self.MEMORY_CAPACITY}_batch{self.batch_size}_K{self.K}"
+        # Construct the full path to the directory
+        results_dir = os.path.join("Results Plots", dir_name)
+        # Create the directory if it doesn't exist
+        if not os.path.exists(results_dir):
+            os.makedirs(results_dir)
+        return results_dir
+    
     def create_and_move_prof_file(self):
         # Specify the ProfilerOutputs directory
         profiler_output_folder = "ProfilerOutputs"
@@ -348,41 +461,3 @@ class DQNAgent:
         new_prof_filepath = os.path.join(profiler_output_folder, new_prof_filename)
         # Return the path to the newly created .prof file
         return new_prof_filepath
-    
-    def visualize_weights(self):
-        if self.after_training:
-            # Get the weights of the Q-network's layers after training
-            fc1_weights = self.q_network.fc1.weight.data.cpu().numpy()
-            fc2_weights = self.q_network.fc2.weight.data.cpu().numpy()
-            fc3_weights = self.q_network.fc3.weight.data.cpu().numpy()
-            
-            # Calculate the change in weights
-            fc1_weights_diff = fc1_weights - self.initial_fc1_weights
-            fc2_weights_diff = fc2_weights - self.initial_fc2_weights
-            fc3_weights_diff = fc3_weights - self.initial_fc3_weights
-
-            # Plot the change in weights for each layer
-            fig, axs = plt.subplots(1, 3, figsize=(12, 4))
-
-            im0 = axs[0].imshow(fc1_weights_diff, cmap='coolwarm', aspect='auto')
-            axs[0].set_title('FC1 Weight Change')
-            
-            im1 = axs[1].imshow(fc2_weights_diff, cmap='coolwarm', aspect='auto')
-            axs[1].set_title('FC2 Weight Change')
-            
-            im2 = axs[2].imshow(fc3_weights_diff, cmap='coolwarm', aspect='auto')
-            axs[2].set_title('FC3 Weight Change')
-
-            # Add a legend
-            fig.colorbar(im0, ax=axs[0], label='Change')
-            fig.colorbar(im1, ax=axs[1], label='Change')
-            fig.colorbar(im2, ax=axs[2], label='Change')
-
-            plt.show(block = False)
-        else:
-            # Log the weights before training
-            self.initial_fc1_weights = self.q_network.fc1.weight.data.cpu().numpy()
-            self.initial_fc2_weights = self.q_network.fc2.weight.data.cpu().numpy()
-            self.initial_fc3_weights = self.q_network.fc3.weight.data.cpu().numpy()
-            self.after_training = True
-    
