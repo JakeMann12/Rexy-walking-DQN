@@ -431,6 +431,7 @@ class DQNAgent:
             self.initial_fc2_weights = self.q_network.fc2.weight.data.cpu().numpy()
             self.initial_fc3_weights = self.q_network.fc3.weight.data.cpu().numpy()
             self.after_training = True
+            pass
         
     def make_results_dir(self):
         # Create a shorter title with key parameters and NN layer sizes
