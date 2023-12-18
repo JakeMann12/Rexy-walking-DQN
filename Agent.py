@@ -207,7 +207,7 @@ class DQNAgent:
                         break
 
                     # Calculate the decay factor - in the episode now
-                    decay_factor = (self.og_epsilon - self.epsilon_min) / self.MEMORY_CAPACITY
+                    decay_factor = (self.og_epsilon - self.epsilon_min) / 1000000 #epsilon decays at 1 million steps
                     self.epsilon = max(self.epsilon_min, self.epsilon - decay_factor)
                 
                 # Store the episode reward in the NumPy array
