@@ -21,6 +21,7 @@ class SimpleRexyEnv(gym.Env):
     PITCH_DEGREES = 25  # Maximum pitch threshold
     MAX_PITCH_THRESHOLD = np.radians(PITCH_DEGREES)
     TIPPING_PENALTY = 0  # Penalty for tipping
+    Z_THRESHOLD = .125
     HEIGHT_REWARD = 1  # Reward for being at the correct height
     HEIGHT_PENALTY = 0  # Penalty for being outside the height range
     SURVIVAL_REWARD = 1.05  # Reward for staying alive
@@ -75,7 +76,7 @@ class SimpleRexyEnv(gym.Env):
         """
         print("=====  STEPTIME  =====\n") if self.DEBUG_MODE else None
         p.configureDebugVisualizer(p.COV_ENABLE_SINGLE_STEP_RENDERING)
-        self.current_step += 1  # Increment the current step at each call to step()
+        self.current_step += self.K  # Increment the current step at each call to step()
 
         # Feed action to the rexy and get observation of rexy's state - skip this many frames
         for frame in range(1,self.K+1):
@@ -107,8 +108,7 @@ class SimpleRexyEnv(gym.Env):
         4. Being on the ground
             - punishes if goes higher than .35 m (starts at .25 m)
         5. Survival reward for staying alive
-        6. Time-dependent penalty for taking too long
-        7. Exit condition for reaching the goal
+        6. Reaching the goal (positive exit condition)
         """
         
         print("------COMPUTE-REWARD TIME--------\n") if self.DEBUG_MODE else None
@@ -131,7 +131,7 @@ class SimpleRexyEnv(gym.Env):
 
         # Rewards/punishes based on Z height
         height_diff = rexy_ob[2] - self.first_obs[2]
-        if abs(height_diff) < .125:
+        if abs(height_diff) < self.Z_THRESHOLD:
             reward += self.HEIGHT_REWARD
         else:
             reward += self.HEIGHT_PENALTY
@@ -140,7 +140,7 @@ class SimpleRexyEnv(gym.Env):
         # Survival reward for staying alive
         reward += self.SURVIVAL_REWARD ** self.current_step
 
-        # Timeout penalty
+        # Timeout penalty - currently a good thing
         if self.current_step >= self.max_ep_steps:
             reward += 1000
             print('got to the end!')
@@ -180,31 +180,6 @@ class SimpleRexyEnv(gym.Env):
         print("=== Reset Complete ===") if self.DEBUG_MODE else None
 
         return rexy_ob, info
-    
-    def render(self): #, mode='human'): #NOTE: didn't change anything but car-> rexy
-        if self.rendered_img is None:
-            self.rendered_img = plt.imshow(np.zeros((100, 100, 4)))
-
-        # Base information
-        rexy_id, client_id = self.rexy.get_ids()
-        proj_matrix = p.computeProjectionMatrixFOV(fov=1200, aspect=1,
-                                                   nearVal=0.01, farVal=100)
-        pos, ori = [list(l) for l in
-                    p.getBasePositionAndOrientation(rexy_id, client_id)]
-        #pos[2] = 0.2 #NOTE: What the hell is this
-
-        # Rotate camera direction
-        rot_mat = np.array(p.getMatrixFromQuaternion(ori)).reshape(3, 3)
-        camera_vec = np.matmul(rot_mat, [1, 0, 0])
-        up_vec = np.matmul(rot_mat, np.array([0, 0, 1]))
-        view_matrix = p.computeViewMatrix(pos, pos + camera_vec, up_vec)
-
-        # Display image
-        frame = p.getCameraImage(100, 100, view_matrix, proj_matrix)[2]
-        frame = np.reshape(frame, (100, 100, 4))
-        self.rendered_img.set_data(frame)
-        plt.draw()
-        plt.pause(.00001)
     
     def close(self):
         p.disconnect(self.client)

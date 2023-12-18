@@ -38,7 +38,7 @@ class Net(nn.Module):
 # Define the DQN agent
 class DQNAgent:
     def __init__(self, env, client, K, track_tf = False, BATCH_SIZE=128, LR=0.01, GAMMA=0.90, 
-                 EPSILON=0.9, EPSILON_DECAY=0.995, EPSILON_MIN=0.01, MEMORY_CAPACITY=2000, 
+                 EPSILON=0.9, EPSILON_MIN=0.01, MEMORY_CAPACITY=2000, 
                  Q_NETWORK_ITERATION=100):
         
         #Cuda
@@ -80,9 +80,7 @@ class DQNAgent:
         # Epsilon-greedy strategy
         self.og_epsilon = EPSILON #static
         self.epsilon = EPSILON #changes
-        self.epsilon_decay = EPSILON_DECAY
         self.epsilon_min = EPSILON_MIN
-        self.num_decay_episodes = 50000 # over the first 50000 episodes it goes to epsilon_min
 
         # Counter for Q-network updates
         self.update_counter = 0
@@ -174,7 +172,7 @@ class DQNAgent:
             profiler = cProfile.Profile()
             profiler.enable()
 
-        if weights and save:
+        if weights and plot:
             self.visualize_weights(save = save)
 
         # Initialize a NumPy array for storing rewards
@@ -195,12 +193,12 @@ class DQNAgent:
                     action = self.select_action(state)
                     jvals = state[8:14] #hardcoded- joint vals
                     next_state, reward, done, newbest = self.env.step(jvals, action)
-                    self.remember(state, action, reward, next_state, done)
+                    self.remember(state, action, reward, next_state, done) #appends to replay buffer
                     total_episode_reward += reward
                     state = next_state
 
                     if newbest == True and self.episode_step > 100:
-                        print(f'got a new best reward for this run! {total_episode_reward:.3f}')
+                        print(f'Survived for more than 3 seconds and high score! ({total_episode_reward:.3f})')
                         self.save_model(model[:-4]+'BEST'+'.pth')
 
                     if done:
@@ -208,9 +206,9 @@ class DQNAgent:
                         self.writer.add_scalar('Reward/Episode', total_episode_reward, self.global_episode) if self.track_tf else None
                         break
 
-                # Calculate the decay factor
-                decay_factor = (self.og_epsilon - self.epsilon_min) / self.num_decay_episodes
-                self.epsilon = max(self.epsilon_min, self.epsilon - decay_factor)
+                    # Calculate the decay factor - in the episode now
+                    decay_factor = (self.og_epsilon - self.epsilon_min) / self.MEMORY_CAPACITY
+                    self.epsilon = max(self.epsilon_min, self.epsilon - decay_factor)
                 
                 # Store the episode reward in the NumPy array
                 epoch_rewards[epoch, episode] = total_episode_reward
@@ -240,8 +238,7 @@ class DQNAgent:
 
         if plot:
             print('finna plot')
-            if weights:
-                    self.visualize_weights(save = save)
+            self.visualize_weights(save = save) if weights else None
             self.plot_rewards(epoch_rewards, save = save)
             self.plot_rewards_and_epsilon(epoch_rewards, epsilon_vals, save = save)
             self.plot_loss_over_time(loss_per_ep, save = save) #removes NaNs
@@ -250,8 +247,8 @@ class DQNAgent:
 
     #%% Helper Functions
     def adjust_hypers(self, num_epochs, avg_reward):
-        self.epsilon = max(self.epsilon_min, self.og_epsilon * (self.epsilon_decay ** (4*self.global_epoch)))
-        print(f'new epsilon is {self.epsilon:.3f} ({self.og_epsilon} * {self.epsilon_decay} ** (4*{self.global_epoch}))')
+        self.epsilon = max(self.epsilon_min, self.og_epsilon * (.99 ** (4*self.global_epoch)))
+        print(f'new epsilon is {self.epsilon:.3f} ({self.og_epsilon} * .99 ** (4*{self.global_epoch}))')
         #if more than a third done, and the reward is between 0 and 5% better
         """if self.global_epoch > (num_epochs // 3) and (1.05 * self.last_ep_avg_reward > avg_reward > self.last_ep_avg_reward):
             print('low rate of increase in reward! reducing learning rate')
@@ -278,7 +275,7 @@ class DQNAgent:
             print(f"Model file '{model_path}' not found.")
 
     def plot_rewards(self, epoch_rewards, save, subplot_size=(4, 3)):
-        epsilon = self.og_epsilon; epsilon_decay = self.epsilon_decay; learning_rate= self.LR 
+        epsilon = self.og_epsilon; learning_rate= self.LR 
         gamma = self.gamma; memory_capacity = self.MEMORY_CAPACITY; batch_size = self.batch_size ; K = self.K
         num_epochs = len(epoch_rewards)
         num_epochs_to_display = min(9, num_epochs)
@@ -288,7 +285,7 @@ class DQNAgent:
         cols = int(np.ceil(num_epochs_to_display / rows))
 
         fig, axs = plt.subplots(rows, cols, figsize=(cols * subplot_size[0], rows * subplot_size[1]))
-        fig.suptitle(f"Rewards per Epoch - ε: {epsilon}, ε Decay: {epsilon_decay}, LR: {learning_rate}, γ: {gamma}, Memory: {memory_capacity}, Batch: {batch_size}, K: {K}")
+        fig.suptitle(f"Rewards per Epoch - ε: {epsilon}, LR: {learning_rate}, γ: {gamma}, Memory: {memory_capacity}, Batch: {batch_size}, K: {K}")
 
         if rows * cols == 1:
             axs = [axs]  # Make axs a list if there's only one subplot
@@ -324,33 +321,32 @@ class DQNAgent:
     def plot_rewards_and_epsilon(self, epoch_rewards, epsilon_vals, save):
         num_epochs, num_episodes = epoch_rewards.shape
 
-        # Calculate the average rewards over time
-        average_rewards = np.mean(epoch_rewards, axis=0)
+        # Flatten the epoch_rewards and epsilon_vals to a single array each
+        total_rewards = epoch_rewards.flatten()
+        total_epsilon_vals = epsilon_vals.flatten()
 
-        # Create a figure and plot the average rewards
+        # Create a figure and plot the rewards
         fig, ax1 = plt.subplots(figsize=(10, 6))
-        ax1.set_xlabel("Episode")
-        ax1.set_ylabel("Average Rewards", color='blue')
-        ax1.plot(np.arange(1, num_episodes + 1), average_rewards, color='blue', label="Average Rewards")
+        ax1.set_xlabel("Total Episode")
+        ax1.set_ylabel("Rewards", color='blue')
+        ax1.plot(np.arange(1, num_epochs * num_episodes + 1), total_rewards, color='blue', label="Rewards")
         ax1.tick_params(axis='y', labelcolor='blue')
         ax1.legend(loc="upper left")
 
         # Create a secondary y-axis for epsilon values on the right side
         ax2 = ax1.twinx()
         ax2.set_ylabel("Epsilon", color='red')
-
-        # Overlay the epsilon values in red
-        ax2.plot(np.arange(1, num_episodes + 1), epsilon_vals[0, :], color='red', linestyle='--', label="Epsilon")
-
+        ax2.plot(np.arange(1, num_epochs * num_episodes + 1), total_epsilon_vals, color='red', linestyle='--', label="Epsilon")
         ax2.tick_params(axis='y', labelcolor='red')
         ax2.legend(loc="upper right")
 
-        plt.title("Average Rewards and Epsilon Over Time")
+        plt.title("Rewards and Epsilon Over All Episodes")
         plt.grid(True)
         plt.show(block=False)
+
         if save:
             results_dir = self.make_results_dir()
-            plot_filename = os.path.join(results_dir, 'AllRewardsandEpsilon.png')
+            plot_filename = os.path.join(results_dir, 'TotalRewardsAndEpsilon.png')
             plt.savefig(plot_filename)
             print(f"Plot saved to {plot_filename}")
 
@@ -435,7 +431,7 @@ class DQNAgent:
         
     def make_results_dir(self):
         # Create a shorter title with key parameters and NN layer sizes
-        dir_name = f"{self.model}_20-256-128-6nn_eps{self.og_epsilon}_dec{self.epsilon_decay}_LR{self.LR}_g{self.gamma}_mem{self.MEMORY_CAPACITY}_batch{self.batch_size}_K{self.K}"
+        dir_name = f"{self.model}_20-256-128-6nn_eps{self.og_epsilon}_LR{self.LR}_g{self.gamma}_mem{self.MEMORY_CAPACITY}_batch{self.batch_size}_K{self.K}"
         # Construct the full path to the directory
         results_dir = os.path.join("Results Plots", dir_name)
         # Create the directory if it doesn't exist

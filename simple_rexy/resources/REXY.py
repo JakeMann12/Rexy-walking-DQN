@@ -7,7 +7,7 @@ class Rexy:
     def __init__(self, client):
         p.setGravity(0,0,-9.81)
         self.client = client
-        f_name = r"simple_rexy\resources\RexyURDF\jake.urdf"
+        f_name = "simple_rexy/resources/RexyURDF/jake.urdf"
         self.rexy = p.loadURDF(
             fileName=f_name,
             basePosition=[0, 0, 0.18],  # hardcoded
@@ -16,7 +16,7 @@ class Rexy:
         )  # NOTE: added flags in extra from hello_bullet
         self.servo_joints = [2, 4, 6, 10, 12, 14] #hardcoded  
         self.max_force = 1.6671305  # NOTE: Pretty sure is Nm
-        self.max_vel = 2 * np.pi/1.14 #NOTE: somehwat assuming rad / sec. 
+        self.max_vel = 2 * np.pi/1.14 # rad / sec. 
         self.joint_min = -.2 * pi
         self.joint_max = .2 * pi
 
