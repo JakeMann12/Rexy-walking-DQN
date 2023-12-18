@@ -1,9 +1,5 @@
-import gym
-import torch
-
 # from agent import TRPOAgent
 from simple_rexy.envs.rexy_env import SimpleRexyEnv
-import time
 import pybullet as p
 import matplotlib.pyplot as plt
 import numpy as np
@@ -61,7 +57,6 @@ def run_trained_agent(model_path, K = 2, num_episodes = 100):
     # Initialize DQNAgent
     agent = DQNAgent('rexy-v0', p.connect(p.GUI), K = K, BATCH_SIZE=32, LR=0.01, GAMMA=0.90,
                      EPSILON=0.0,  # Set epsilon to 0 for a deterministic policy
-                     EPSILON_DECAY=1.0,  # No epsilon decay during the run
                      EPSILON_MIN=0.0,  # Minimum epsilon during the run
                      MEMORY_CAPACITY=1000000,
                      Q_NETWORK_ITERATION=50)

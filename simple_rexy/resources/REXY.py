@@ -54,6 +54,16 @@ class Rexy:
         actions = [-self.max_vel/30 if bit == '0' else self.max_vel/30 for bit in binary_str]
         return actions
 
+    def min_max_scale(self, observation):
+        num_joints = len(self.servo_joints)
+        low=np.float32(np.array([-1, -2, 0, -pi, -pi/2, -pi, -4, -4] + [self.joint_min]*num_joints + [-self.max_vel] * num_joints))
+        high=np.float32(np.array([5, 2, .4, pi, pi/2, pi, 4, 4] + [self.joint_max]*num_joints + [self.max_vel] * num_joints))
+        # Compute the scale for each feature and compute mix-max
+        scales = 1 / (high - low)
+        scaled_observation = (observation - low) * scales
+        return scaled_observation
+    
+
     def get_observation(self):
         # Get position, orientation, and velocity in fewer calls
         pos, orientation = p.getBasePositionAndOrientation(self.rexy, self.client)
@@ -66,6 +76,7 @@ class Rexy:
 
         # Create observation array efficiently
         observation = np.array(pos + rpy + vel + joint_angles + joint_speeds, dtype=np.float32)
+        observation = self.min_max_scale(observation)
         return observation
         
 
