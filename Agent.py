@@ -81,6 +81,7 @@ class DQNAgent:
         self.og_epsilon = EPSILON #static
         self.epsilon = EPSILON #changes
         self.epsilon_min = EPSILON_MIN
+        self.decay_steps = 2000000
 
         # Counter for Q-network updates
         self.update_counter = 0
@@ -142,7 +143,7 @@ class DQNAgent:
 
         self.optimizer.zero_grad()
 
-        with autocast():
+        with autocast(): # mixed precision
             q_values = self.q_network(states)
             target_q_values = self.target_network(next_states).detach() #detach prevents gradient flow
             target = rewards + self.gamma * (1 - dones) * target_q_values.max(dim=1)[0]
@@ -196,6 +197,9 @@ class DQNAgent:
                     self.remember(state, action, reward, next_state, done) #appends to replay buffer
                     total_episode_reward += reward
                     state = next_state
+                    # Calculate the decay factor - in the episode now
+                    decay_factor = (self.og_epsilon - self.epsilon_min) / self.decay_steps #epsilon decays at 2.5 million steps
+                    self.epsilon = max(self.epsilon_min, self.epsilon - decay_factor)
 
                     if newbest == True and self.episode_step > 100:
                         print(f'Survived for more than 3 seconds and high score! ({total_episode_reward:.3f})')
@@ -206,14 +210,10 @@ class DQNAgent:
                         self.writer.add_scalar('Reward/Episode', total_episode_reward, self.global_episode) if self.track_tf else None
                         break
 
-                    # Calculate the decay factor - in the episode now
-                    decay_factor = (self.og_epsilon - self.epsilon_min) / 1000000 #epsilon decays at 1 million steps
-                    self.epsilon = max(self.epsilon_min, self.epsilon - decay_factor)
-                
-                # Store the episode reward in the NumPy array
+                # Store the episode reward and loss in the NumPy array
                 epoch_rewards[epoch, episode] = total_episode_reward
 
-                # Decay epsilon here, post-episode
+                # calculate loss for every single episode
                 loss = self.replay(self.batch_size)
                 loss_per_ep[epoch, episode] = loss
                 epsilon_vals[epoch,episode] = self.epsilon * 100 #SCALING FOR GRAPH
@@ -342,6 +342,7 @@ class DQNAgent:
 
         plt.title("Rewards and Epsilon Over All Episodes")
         plt.grid(True)
+        plt.tight_layout()
         plt.show(block=False)
 
         if save:
@@ -378,6 +379,7 @@ class DQNAgent:
         plt.ylabel("Loss")
         plt.legend()
         plt.grid(True)
+        plt.tight_layout()
         plt.show(block = False)
         if save:
             results_dir = self.make_results_dir()
